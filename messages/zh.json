@@ -72,7 +72,13 @@
     "ccHidden": "盲听模式",
     "ccNoSubtitle": "无字幕",
     "shortcutPause": "暂停并输入",
-    "shortcutResume": "继续播放"
+    "shortcutResume": "继续播放",
+    "aiExplain": "AI 释义",
+    "explaining": "查询中...",
+    "confirmExplainTitle": "听写完成了吗？",
+    "confirmExplainDesc": "继续操作会将你输入的所有内容发送给 AI 进行词汇分析和释义。根据文本长短可能需要几秒钟的时间。",
+    "confirmExplainCancel": "取消",
+    "confirmExplainSubmit": "继续并请求释义"
   },
   "video": {
     "back": "返回",

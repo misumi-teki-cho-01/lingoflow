@@ -1,5 +1,5 @@
 "use client";
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -7,6 +7,7 @@ import Highlight from "@tiptap/extension-highlight";
 import Placeholder from "@tiptap/extension-placeholder";
 import Paragraph from "@tiptap/extension-paragraph";
 import { toggleMark } from "prosemirror-commands";
+import { DictionaryPopover } from "./dictionary-popover";
 // ── Custom paragraph extension ─────────────────────────────────────────────
 const TimestampedParagraph = Paragraph.extend({
     addAttributes() {
@@ -32,6 +33,7 @@ export interface EchoEditorProps {
     /** localStorage key suffix for draft persistence. Omit to disable autosave. */
     draftKey?: string;
     className?: string;
+    definitions?: Record<string, string>;
 }
 // ── localStorage helpers ───────────────────────────────────────────────────
 const DRAFT_PREFIX = "echo-draft-";
@@ -59,8 +61,18 @@ function debounce<T extends (...args: Parameters<T>) => void>(fn: T, ms: number)
 }
 // ── Component ──────────────────────────────────────────────────────────────
 export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
-    function EchoEditor({ onCommit, currentTime, draftKey, className }, ref) {
+    function EchoEditor({ onCommit, currentTime, draftKey, className, definitions = {} }, ref) {
         const t = useTranslations("scribe");
+        
+        // Popover state
+        const [popup, setPopup] = useState<{ visible: boolean; x: number; y: number; word: string; meaning: string }>({
+            visible: false,
+            x: 0,
+            y: 0,
+            word: "",
+            meaning: ""
+        });
+
         const onCommitRef = useRef(onCommit);
         onCommitRef.current = onCommit;
         const currentTimeRef = useRef(currentTime);
@@ -204,9 +216,41 @@ export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
                     <span>{t("editorHint")}</span>
                 </div>
                 {/* Editor */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div 
+                  className="flex-1 overflow-y-auto custom-scrollbar relative"
+                  onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.tagName === 'STRONG') {
+                          const word = target.textContent?.trim() || "";
+                          const meaning = definitions[word];
+                          if (meaning) {
+                              // Position popover near mouse
+                              const offset = 10;
+                              setPopup({
+                                  visible: true,
+                                  x: e.clientX + offset,
+                                  y: e.clientY + offset,
+                                  word,
+                                  meaning
+                              });
+                          }
+                      } else {
+                          setPopup(prev => ({ ...prev, visible: false }));
+                      }
+                  }}
+                >
                     <EditorContent editor={editor} />
                 </div>
+                
+                {/* AI Hover Popover */}
+                <DictionaryPopover
+                  visible={popup.visible}
+                  x={popup.x}
+                  y={popup.y}
+                  word={popup.word}
+                  meaning={popup.meaning}
+                  onClose={() => setPopup(prev => ({ ...prev, visible: false }))}
+                />
             </div>
         );
     }

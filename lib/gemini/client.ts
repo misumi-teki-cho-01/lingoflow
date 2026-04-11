@@ -12,3 +12,14 @@ export function getGeminiClient(): GoogleGenerativeAI {
   }
   return genAI;
 }
+
+/**
+ * Encapsulated AI Generation Call.
+ * Add models here as needed (defaulting to the highly capable gemini-2.0-flash).
+ */
+export async function generateText(prompt: string, modelType: string = "gemini-2.0-flash"): Promise<string> {
+  const client = getGeminiClient();
+  const model = client.getGenerativeModel({ model: modelType });
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}

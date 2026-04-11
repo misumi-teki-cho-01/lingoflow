@@ -72,7 +72,13 @@
     "ccHidden": "リスニングモード",
     "ccNoSubtitle": "字幕なし",
     "shortcutPause": "一時停止して入力",
-    "shortcutResume": "再生する"
+    "shortcutResume": "再生する",
+    "aiExplain": "AI 解説",
+    "explaining": "検索中...",
+    "confirmExplainTitle": "ディクテーションは完了しましたか？",
+    "confirmExplainDesc": "続行すると、入力したすべての内容がAIに送信され、語彙の分析と解説が行われます。数秒かかる場合があります。",
+    "confirmExplainCancel": "キャンセル",
+    "confirmExplainSubmit": "続行して解説をリクエスト"
   },
   "video": {
     "back": "戻る",

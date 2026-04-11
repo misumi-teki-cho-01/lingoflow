@@ -72,7 +72,13 @@
     "ccHidden": "Blind Listen",
     "ccNoSubtitle": "No subtitle here",
     "shortcutPause": "Pause & Type",
-    "shortcutResume": "Resume Playback"
+    "shortcutResume": "Resume Playback",
+    "aiExplain": "AI Explain",
+    "explaining": "Querying...",
+    "confirmExplainTitle": "Finished dictating?",
+    "confirmExplainDesc": "Continuing will send all your inputted content to AI for vocabulary extraction and explanation. This might take a few seconds.",
+    "confirmExplainCancel": "Cancel",
+    "confirmExplainSubmit": "Continue and Explain"
   },
   "video": {
     "back": "Back",

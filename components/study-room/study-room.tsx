@@ -1,12 +1,14 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useVideoPlayer } from "@/hooks/use-video-player";
 import { useTranscriptSync } from "@/hooks/use-transcript-sync";
 import { VideoControls } from "@/components/video/video-controls";
 import { TranscriptPanel } from "@/components/transcript/transcript-panel";
 import { EchoEditor, type EchoEditorHandle } from "@/components/scribe/echo-editor";
+import { ConfirmExplainModal } from "./confirm-explain-modal";
+import { fetchAIExplanations } from "@/lib/api/explain";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import {
@@ -25,6 +27,8 @@ import {
   Download,
   Eye,
   EyeOff,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -58,9 +62,15 @@ export function StudyRoom({
   defaultMode = "scribe",
 }: StudyRoomProps) {
   const t = useTranslations("studyRoom");
+  const locale = useLocale();
 
   const [mode, setMode] = useState<StudyMode>(defaultMode);
   const [showCC, setShowCC] = useState(false);
+
+  // AI Definition state
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [showExplainConfirm, setShowExplainConfirm] = useState(false);
+  const [definitions, setDefinitions] = useState<Record<string, string>>({});
 
   // ── Player ────────────────────────────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -127,6 +137,30 @@ export function StudyRoom({
     }
   };
 
+  const handleExplainConfirm = async () => {
+    setShowExplainConfirm(false);
+    setIsExplaining(true);
+    try {
+      const html = editorRef.current?.getHtml() ?? "";
+      const meta: ExportMetadata = {
+        title: videoMeta.title || `YouTube · ${videoId}`,
+        url: videoUrl,
+        channelName: videoMeta.channelName || undefined,
+        date: new Date().toLocaleDateString(),
+      };
+      
+      const md = convertToMarkdown(html, meta);
+      const definitionsMap = await fetchAIExplanations(md, locale);
+      setDefinitions(definitionsMap);
+      
+    } catch (e: any) {
+      console.error("[Explain AI] Error:", e);
+      alert(t("error") + " - " + e.message);
+    } finally {
+      setIsExplaining(false);
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
@@ -179,11 +213,25 @@ export function StudyRoom({
           </button>
         </div>
 
-        {/* Export */}
-        <Button variant="outline" size="sm" onClick={handleExport} className="h-8 gap-1.5 text-xs shrink-0">
-          <Download className="h-3.5 w-3.5" />
-          {t("exportMd")}
-        </Button>
+        {/* Export and AI Actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          {mode === "scribe" && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowExplainConfirm(true)} 
+              disabled={isExplaining}
+              className="h-8 gap-1.5 text-xs text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30"
+            >
+              {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {isExplaining ? t("explaining") : t("aiExplain")}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={handleExport} className="h-8 gap-1.5 text-xs">
+            <Download className="h-3.5 w-3.5" />
+            {t("exportMd")}
+          </Button>
+        </div>
       </header>
 
       {/* ── Main ── */}
@@ -266,6 +314,7 @@ export function StudyRoom({
               onCommit={() => playerPlayRef.current()}
               currentTime={player.currentTime}
               draftKey={videoId}
+              definitions={definitions}
             />
           ) : (
             <TranscriptPanel
@@ -279,6 +328,17 @@ export function StudyRoom({
         </section>
 
       </main>
+
+      {/* AI Explanation Confirmation Modal */}
+      <ConfirmExplainModal
+        visible={showExplainConfirm}
+        title={t("confirmExplainTitle")}
+        description={t("confirmExplainDesc")}
+        cancelText={t("confirmExplainCancel")}
+        submitText={t("confirmExplainSubmit")}
+        onCancel={() => setShowExplainConfirm(false)}
+        onSubmit={handleExplainConfirm}
+      />
     </div>
   )
 };
