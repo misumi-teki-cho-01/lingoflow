@@ -23,6 +23,7 @@ export interface UseVideoPlayerReturn {
   play: () => void;
   pause: () => void;
   seekTo: (time: number) => void;
+  seekBy: (seconds: number) => void;
   togglePlay: () => void;
   toggleMute: () => void;
   currentTime: number;
@@ -168,6 +169,15 @@ export function useVideoPlayer({
     isRewinding.current = false;
     providerRef.current?.seekTo(time);
   }, []);
+  const seekBy = useCallback((seconds: number) => {
+    const provider = providerRef.current;
+    if (!provider) return;
+    const time = provider.getCurrentTime();
+    const duration = provider.getDuration();
+    const target = Math.max(0, Math.min(duration, time + seconds));
+    isRewinding.current = false;
+    provider.seekTo(target);
+  }, []);
   const togglePlay = useCallback(() => {
     if (playerState === "playing") {
       providerRef.current?.pause();
@@ -192,6 +202,7 @@ export function useVideoPlayer({
     play,
     pause,
     seekTo,
+    seekBy,
     togglePlay,
     toggleMute,
     currentTime,

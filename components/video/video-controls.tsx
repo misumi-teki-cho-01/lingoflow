@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Play, Pause, Volume2, VolumeX, Rewind } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Play, Pause, Volume2, VolumeX, Rewind, FastForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatTime } from "@/lib/utils/format";
 import type { UseVideoPlayerReturn } from "@/hooks/use-video-player";
@@ -17,6 +17,8 @@ export function VideoControls({ player }: VideoControlsProps) {
     play,
     pause,
     seekTo,
+    seekBy,
+    togglePlay,
     setPlaybackRate,
     toggleMute,
     playerState,
@@ -29,6 +31,86 @@ export function VideoControls({ player }: VideoControlsProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragValue, setDragValue] = useState(0);
   const [rate, setRate] = useState(1);
+  const [seekStep, setSeekStep] = useState(5);
+
+  // Load saved seekStep from localStorage on mount.
+  useEffect(() => {
+    const saved = localStorage.getItem("lingoflow-seek-step");
+    if (saved) {
+      setSeekStep(Number(saved));
+    }
+  }, []);
+
+  const handleSeekStepChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = Number(e.target.value);
+    setSeekStep(val);
+    localStorage.setItem("lingoflow-seek-step", String(val));
+  };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // 🐛 Global Key Logger to see EVERYTHING that passes through
+      // console.log("[Global KeyDown]", e.key, e.code, "alt:", e.altKey, "meta:", e.metaKey, "ctrl:", e.ctrlKey);
+
+      // 1. Global Shortcuts allowed EVERYWHERE (even while typing)
+      // Accept ANY modifier (Ctrl, Alt/Option, or Cmd)
+      const hasModifier = e.altKey || e.ctrlKey || e.metaKey;
+
+      // Strict physical key detection bypassing Mac weird character maps
+      const isJ = e.code === "KeyJ" || e.key.toLowerCase() === "j" || e.key === "∆";
+      const isL = e.code === "KeyL" || e.key.toLowerCase() === "l" || e.key === "¬";
+
+      if (hasModifier && isJ) {
+        e.preventDefault();
+        e.stopPropagation();
+        seekBy(-seekStep);
+        return;
+      }
+      if (hasModifier && isL) {
+        e.preventDefault();
+        e.stopPropagation();
+        seekBy(seekStep);
+        return;
+      }
+
+      // Safely cast to HTMLElement
+      const target = document.activeElement as HTMLElement | null;
+
+      // Don't intercept naked arrows/space if user is typing
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      // 3. Spacebar to toggle Play/Pause
+      if (e.code === "Space" && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePlay();
+        return;
+      }
+
+      // 2. Naked Arrow keys (no modifiers), ONLY intercepted when NOT typing
+      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          e.stopPropagation();
+          seekBy(-seekStep);
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          e.stopPropagation();
+          seekBy(seekStep);
+        }
+      }
+    };
+
+    // Use capture phase (true) to intercept the key BEFORE TipTap's contenteditable receives it!
+    window.addEventListener("keydown", handleGlobalKeyDown, true);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown, true);
+  }, [seekStep, seekBy, togglePlay]);
 
   const isPlaying = playerState === "playing";
   const displayTime = isDragging ? dragValue : currentTime;
@@ -103,6 +185,43 @@ export function VideoControls({ player }: VideoControlsProps) {
         </Button>
 
         <div className="flex-1" />
+
+        {/* Seek Controls */}
+        <div className="flex items-center gap-1 border-r border-border pr-2 mr-1">
+          <select
+            value={seekStep}
+            onChange={handleSeekStepChange}
+            disabled={!isReady}
+            className="rounded border border-border bg-background px-1.5 py-0.5 text-xs disabled:opacity-40 cursor-pointer outline-none focus:ring-1 focus:ring-ring"
+            title="Fast-forward/Rewind duration"
+          >
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((s) => (
+              <option key={s} value={s}>±{s}s</option>
+            ))}
+          </select>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!isReady}
+            onClick={() => seekBy(-seekStep)}
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            title={`Rewind ${seekStep}s (Cmd/Ctrl+J or ←)`}
+          >
+            <Rewind className="h-3.5 w-3.5" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!isReady}
+            onClick={() => seekBy(seekStep)}
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            title={`Forward ${seekStep}s (Cmd/Ctrl+L or →)`}
+          >
+            <FastForward className="h-3.5 w-3.5" />
+          </Button>
+        </div>
 
         {/* Playback rate */}
         <select
