@@ -1,0 +1,123 @@
+{
+  "common": {
+    "appName": "LingoFlow",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back"
+  },
+  "nav": {
+    "dashboard": "My Videos",
+    "settings": "Settings",
+    "login": "Log in",
+    "signup": "Sign up",
+    "logout": "Log out"
+  },
+  "landing": {
+    "title": "LingoFlow",
+    "subtitle": "AI-Powered English Shadowing & Intensive Reading",
+    "description": "Paste a video link, let AI transcribe it, and start your shadowing practice",
+    "getStarted": "Get Started",
+    "features": {
+      "shadow": {
+        "title": "Shadow Practice",
+        "description": "Auto-rewind on pause for seamless repetition"
+      },
+      "transcript": {
+        "title": "Smart Transcription",
+        "description": "AI-generated transcripts with precise timestamps"
+      },
+      "annotation": {
+        "title": "Annotations & Explanations",
+        "description": "Select text for instant AI vocabulary and grammar insights"
+      }
+    }
+  },
+  "dashboard": {
+    "title": "Video Library",
+    "subtitle": "Paste a YouTube link to start learning",
+    "importVideo": "Import Video",
+    "urlPlaceholder": "Paste a YouTube or Bilibili link...",
+    "recentImports": "Recently Imported",
+    "noVideos": "No videos imported yet",
+    "noVideosHint": "Paste a link to import your first video",
+    "importing": "Importing...",
+    "importingHint": "Fetching subtitles, this may take a few seconds...",
+    "errorNoSubtitles": "No subtitles available for this video. Try another one.",
+    "errorInvalidUrl": "Please enter a valid YouTube link",
+    "errorBilibiliUnsupported": "Bilibili support coming soon. Please use a YouTube link.",
+    "errorSaveFailed": "Failed to save video. Please try again."
+  },
+  "player": {
+    "play": "Play",
+    "pause": "Pause",
+    "speed": "Playback Speed"
+  },
+  "shadow": {
+    "modeLabel": "Shadow Mode",
+    "rewindButton": "Rewind",
+    "rewindDuration": "Rewind Duration",
+    "practiceCount": "Practiced {count} times",
+    "totalTime": "{minutes} minutes total"
+  },
+  "studyRoom": {
+    "echoScribeMode": "Echo Scribe",
+    "ccMode": "CC Subtitles",
+    "exportMd": "Export MD",
+    "back": "Back",
+    "showCC": "Show Subtitles",
+    "hideCC": "Hide Subtitles",
+    "ccHidden": "Blind Listen",
+    "ccNoSubtitle": "No subtitle here",
+    "shortcutPause": "Pause & Type",
+    "shortcutResume": "Resume Playback"
+  },
+  "video": {
+    "back": "Back",
+    "segmentCount": "{count} segments",
+    "echoScribe": "Echo Scribe",
+    "fetchingSubtitles": "Fetching subtitles..."
+  },
+  "transcript": {
+    "loading": "Transcribing...",
+    "failed": "Transcription failed",
+    "explain": "AI Explain",
+    "highlight": "Highlight",
+    "bookmark": "Bookmark",
+    "retry": "Retry",
+    "title": "Transcript",
+    "noSubtitles": "No Subtitles",
+    "noSubtitlesDesc": "No subtitles or transcript found for this video",
+    "fetchFailed": "Fetch Failed",
+    "searchPlaceholder": "Search transcript...",
+    "searchEmpty": "No segments found for \"{query}\"",
+    "autoScroll": "Auto-scroll",
+    "followProgress": "Follow Progress",
+    "sourceEnhanced": "AI Enhanced",
+    "sourceRaw": "Raw Subtitles",
+    "sourceAudio": "AI Transcribed",
+    "sourceFailed": "Load Failed"
+  },
+  "scribe": {
+    "title": "Echo Scribe",
+    "backToStudy": "Back to Study",
+    "showCC": "Show Subtitles",
+    "hideCC": "Hide Subtitles",
+    "exportMd": "Export MD",
+    "ccHidden": "Subtitles hidden — focus on listening",
+    "ccNoSubtitle": "No subtitle at this timestamp",
+    "shortcutPause": "Pause & Type",
+    "shortcutResume": "Resume Playback",
+    "editorMode": "ECHO SCRIBE MODE",
+    "editorHint": "⌘B to mark | Shift+Enter to resume",
+    "editorPlaceholder": "What did you hear? Press Enter to pause and start…"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "rewindDefault": "Default Rewind Duration",
+    "theme": "Theme"
+  }
+}

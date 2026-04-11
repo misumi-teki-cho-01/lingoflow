@@ -1,0 +1,123 @@
+{
+  "common": {
+    "appName": "LingoFlow",
+    "loading": "加载中...",
+    "error": "出错了",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "back": "返回"
+  },
+  "nav": {
+    "dashboard": "我的视频",
+    "settings": "设置",
+    "login": "登录",
+    "signup": "注册",
+    "logout": "退出登录"
+  },
+  "landing": {
+    "title": "LingoFlow",
+    "subtitle": "AI 驱动的英语影子练习与精读工具",
+    "description": "粘贴视频链接，AI 自动转录，开始你的影子跟读训练",
+    "getStarted": "开始使用",
+    "features": {
+      "shadow": {
+        "title": "影子跟读",
+        "description": "暂停自动回溯，反复练习每一句"
+      },
+      "transcript": {
+        "title": "智能转录",
+        "description": "AI 生成带时间戳的精准转录文本"
+      },
+      "annotation": {
+        "title": "标注释义",
+        "description": "选中文本，AI 即时解释词汇与语法"
+      }
+    }
+  },
+  "dashboard": {
+    "title": "视频库",
+    "subtitle": "粘贴 YouTube 链接，开始学习",
+    "importVideo": "导入视频",
+    "urlPlaceholder": "粘贴 YouTube 或 Bilibili 链接...",
+    "recentImports": "最近导入",
+    "noVideos": "还没有导入任何视频",
+    "noVideosHint": "粘贴链接导入你的第一个视频",
+    "importing": "正在导入...",
+    "importingHint": "正在获取字幕，可能需要几秒钟...",
+    "errorNoSubtitles": "该视频没有可用字幕，请尝试其他视频",
+    "errorInvalidUrl": "请输入有效的 YouTube 链接",
+    "errorBilibiliUnsupported": "Bilibili 支持即将上线，请使用 YouTube 链接",
+    "errorSaveFailed": "视频保存失败，请重试"
+  },
+  "player": {
+    "play": "播放",
+    "pause": "暂停",
+    "speed": "播放速度"
+  },
+  "shadow": {
+    "modeLabel": "影子模式",
+    "rewindButton": "回溯",
+    "rewindDuration": "回溯秒数",
+    "practiceCount": "练习 {count} 次",
+    "totalTime": "累计 {minutes} 分钟"
+  },
+  "studyRoom": {
+    "echoScribeMode": "Echo Scribe",
+    "ccMode": "CC 字幕",
+    "exportMd": "导出 MD",
+    "back": "返回",
+    "showCC": "显示字幕",
+    "hideCC": "隐藏字幕",
+    "ccHidden": "盲听模式",
+    "ccNoSubtitle": "无字幕",
+    "shortcutPause": "暂停并输入",
+    "shortcutResume": "继续播放"
+  },
+  "video": {
+    "back": "返回",
+    "segmentCount": "{count} 句段",
+    "echoScribe": "Echo Scribe",
+    "fetchingSubtitles": "正在获取字幕..."
+  },
+  "transcript": {
+    "loading": "正在转录...",
+    "failed": "转录失败",
+    "explain": "AI 解释",
+    "highlight": "高亮",
+    "bookmark": "收藏",
+    "retry": "重试",
+    "title": "字幕转录",
+    "noSubtitles": "暂无字幕",
+    "noSubtitlesDesc": "该视频未找到可用的字幕或转录内容",
+    "fetchFailed": "获取失败",
+    "searchPlaceholder": "在转录中搜索...",
+    "searchEmpty": "未找到包含 \"{query}\" 的片段",
+    "autoScroll": "自动滚动",
+    "followProgress": "追随进度",
+    "sourceEnhanced": "AI 增强",
+    "sourceRaw": "原始字幕",
+    "sourceAudio": "AI 转录",
+    "sourceFailed": "加载失败"
+  },
+  "scribe": {
+    "title": "Echo Scribe",
+    "backToStudy": "返回学习室",
+    "showCC": "显示字幕",
+    "hideCC": "隐藏字幕",
+    "exportMd": "导出 MD",
+    "ccHidden": "字幕已隐藏，专注盲听中",
+    "ccNoSubtitle": "当前时间点无字幕",
+    "shortcutPause": "暂停并输入",
+    "shortcutResume": "继续播放",
+    "editorMode": "ECHO SCRIBE MODE",
+    "editorHint": "⌘B 标记 | Shift+Enter 完成",
+    "editorPlaceholder": "听到了什么？按 Enter 暂停并开始听写..."
+  },
+  "settings": {
+    "title": "设置",
+    "language": "界面语言",
+    "rewindDefault": "默认回溯时长",
+    "theme": "主题"
+  }
+}

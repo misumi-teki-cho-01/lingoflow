@@ -128,3 +128,37 @@
     @apply font-sans;
   }
 }
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full transition-colors hover:bg-muted-foreground/30;
+  }
+}
+
+/* ── Echo Scribe editor (TipTap / ProseMirror) ─────────────────────────── */
+/* Bold text is repurposed as a "mark for review" highlight.                */
+.ProseMirror strong {
+  background-color: rgb(253 224 71 / 0.35) !important; /* yellow-400 @ 35% */
+  color: inherit !important;
+  padding: 0 0.15rem;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.dark .ProseMirror strong {
+  background-color: rgb(139 92 246 / 0.35) !important; /* violet-500 @ 35% */
+}
+
+/* Placeholder text (Tiptap renders it via data-placeholder + :before) */
+.ProseMirror p.is-empty:first-child::before {
+  color: var(--color-muted-foreground);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

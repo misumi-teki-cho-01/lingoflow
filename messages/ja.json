@@ -1,0 +1,123 @@
+{
+  "common": {
+    "appName": "LingoFlow",
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "back": "戻る"
+  },
+  "nav": {
+    "dashboard": "マイ動画",
+    "settings": "設定",
+    "login": "ログイン",
+    "signup": "新規登録",
+    "logout": "ログアウト"
+  },
+  "landing": {
+    "title": "LingoFlow",
+    "subtitle": "AI搭載の英語シャドーイング＆精読ツール",
+    "description": "動画リンクを貼り付け、AIが自動で文字起こし、シャドーイング練習を始めましょう",
+    "getStarted": "始める",
+    "features": {
+      "shadow": {
+        "title": "シャドーイング",
+        "description": "一時停止で自動巻き戻し、繰り返し練習"
+      },
+      "transcript": {
+        "title": "スマート文字起こし",
+        "description": "AIがタイムスタンプ付きの正確な文字起こしを生成"
+      },
+      "annotation": {
+        "title": "注釈と解説",
+        "description": "テキストを選択してAIによる語彙・文法の即時解説"
+      }
+    }
+  },
+  "dashboard": {
+    "title": "動画ライブラリ",
+    "subtitle": "YouTubeリンクを貼り付けて学びを始めましょう",
+    "importVideo": "動画をインポート",
+    "urlPlaceholder": "YouTubeまたはBilibiliのリンクを貼り付け...",
+    "recentImports": "最近のインポート",
+    "noVideos": "まだ動画がインポートされていません",
+    "noVideosHint": "リンクを貼り付けて最初の動画をインポート",
+    "importing": "インポート中...",
+    "importingHint": "字幕を取得中です。数秒かかる場合があります...",
+    "errorNoSubtitles": "この動画に字幕がありません。別の動画をお試しください。",
+    "errorInvalidUrl": "有効なYouTubeリンクを入力してください",
+    "errorBilibiliUnsupported": "Bilibiliサポートは待機中です。YouTubeリンクを使用してください。",
+    "errorSaveFailed": "動画の保存に失敗しました。御再試ください。"
+  },
+  "player": {
+    "play": "再生",
+    "pause": "一時停止",
+    "speed": "再生速度"
+  },
+  "shadow": {
+    "modeLabel": "シャドーモード",
+    "rewindButton": "巻き戻し",
+    "rewindDuration": "巻き戻し秒数",
+    "practiceCount": "{count}回練習済み",
+    "totalTime": "合計{minutes}分"
+  },
+  "studyRoom": {
+    "echoScribeMode": "Echo Scribe",
+    "ccMode": "CC字幕",
+    "exportMd": "MDエクスポート",
+    "back": "戻る",
+    "showCC": "字幕を表示",
+    "hideCC": "字幕を非表示",
+    "ccHidden": "リスニングモード",
+    "ccNoSubtitle": "字幕なし",
+    "shortcutPause": "一時停止して入力",
+    "shortcutResume": "再生する"
+  },
+  "video": {
+    "back": "戻る",
+    "segmentCount": "{count} セグメント",
+    "echoScribe": "Echo Scribe",
+    "fetchingSubtitles": "字幕を取得中..."
+  },
+  "transcript": {
+    "loading": "文字起こし中...",
+    "failed": "文字起こしに失敗しました",
+    "explain": "AI解説",
+    "highlight": "ハイライト",
+    "bookmark": "ブックマーク",
+    "retry": "再試行",
+    "title": "文字起こし",
+    "noSubtitles": "字幕なし",
+    "noSubtitlesDesc": "この動画の字幕または文字起こしが見つかりませんでした",
+    "fetchFailed": "取得失敗",
+    "searchPlaceholder": "文字起こしを検索...",
+    "searchEmpty": "\"{query}\"を含むセグメントが見つかりません",
+    "autoScroll": "自動スクロール",
+    "followProgress": "見出しに戻る",
+    "sourceEnhanced": "AI強化",
+    "sourceRaw": "原字幕",
+    "sourceAudio": "AI文字起こし",
+    "sourceFailed": "読み込み失敗"
+  },
+  "scribe": {
+    "title": "Echo Scribe",
+    "backToStudy": "学習生に戻る",
+    "showCC": "字幕を表示",
+    "hideCC": "字幕を非表示",
+    "exportMd": "MDエクスポート",
+    "ccHidden": "字幕非表示—リスニングに集中",
+    "ccNoSubtitle": "この時間に字幕なし",
+    "shortcutPause": "一時停止して入力",
+    "shortcutResume": "再生する",
+    "editorMode": "ECHO SCRIBE MODE",
+    "editorHint": "⌘B でマーク | Shift+Enter で完了",
+    "editorPlaceholder": "何を聞きましたか？Enterで一時停止して記述を开始..."
+  },
+  "settings": {
+    "title": "設定",
+    "language": "表示言語",
+    "rewindDefault": "デフォルト巻き戻し時間",
+    "theme": "テーマ"
+  }
+}
