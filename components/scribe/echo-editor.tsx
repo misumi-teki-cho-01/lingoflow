@@ -87,12 +87,81 @@ export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
                         "prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[400px] h-full px-4 py-4",
                 },
                 handleKeyDown: (view, event) => {
-                    // ⌘B / Ctrl+B → toggle bold (displayed as highlight via CSS)
+                    const { state, dispatch } = view;
+                    const { tr, selection, schema } = state;
+                    const boldType = schema.marks.bold;
+
+                    // Space intercept: break out of bold so subsequent typing is unbolded
+                    if (event.key === " " && boldType) {
+                        let isBold = false;
+                        if (state.storedMarks) {
+                            isBold = !!boldType.isInSet(state.storedMarks);
+                        } else {
+                            isBold = !!boldType.isInSet(selection.$from.marks());
+                        }
+
+                        if (isBold) {
+                            event.preventDefault();
+                            const { from } = selection;
+                            tr.insertText(" ");
+                            tr.removeMark(from, from + 1, boldType);
+                            
+                            const marks = (tr.storedMarks || tr.selection.$from.marks()).filter(m => m.type !== boldType);
+                            tr.setStoredMarks(marks);
+                            
+                            if (dispatch) dispatch(tr);
+                            return true;
+                        }
+                    }
+
                     if (event.key === "b" && (event.metaKey || event.ctrlKey)) {
                         event.preventDefault();
-                        const boldType = view.state.schema.marks.bold;
-                        if (boldType) {
-                            toggleMark(boldType)(view.state, view.dispatch);
+                        if (!boldType) return true;
+
+                        let { from, to } = selection;
+
+                        if (selection.empty) {
+                            const $pos = selection.$from;
+                            const text = $pos.parent.textContent;
+                            const offset = $pos.parentOffset;
+
+                            let start = offset;
+                            while (start > 0 && text.charAt(start - 1) !== " ") {
+                                start--;
+                            }
+                            let end = offset;
+                            while (end < text.length && text.charAt(end) !== " ") {
+                                end++;
+                            }
+
+                            if (start !== end) {
+                                from = $pos.start() + start;
+                                to = $pos.start() + end;
+                            }
+                        }
+
+                        if (from !== to) {
+                            let hasBold = false;
+                            state.doc.nodesBetween(from, to, (node) => {
+                                if (node.marks && boldType.isInSet(node.marks)) {
+                                    hasBold = true;
+                                }
+                            });
+
+                            if (hasBold) {
+                                tr.removeMark(from, to, boldType);
+                            } else {
+                                tr.addMark(from, to, boldType.create());
+                            }
+                        }
+
+                        // Prevent "bold input mode" by ensuring storedMarks doesn't contain bold
+                        const inheritedMarks = state.storedMarks || state.selection.$from.marks();
+                        const marksWithoutBold = inheritedMarks.filter(m => m.type !== boldType);
+                        tr.setStoredMarks(marksWithoutBold);
+
+                        if (dispatch) {
+                            dispatch(tr);
                         }
                         return true;
                     }
