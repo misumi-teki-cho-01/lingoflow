@@ -10,3 +10,20 @@ RETURN STRICTLY A JSON OBJECT where the keys are the exact bolded words (without
 
 Text:
 {{text}}`;
+
+export const ENHANCEMENT_PROMPT = `You are a language learning assistant. I'll give you a transcript from a video with timestamps. Please improve it for English learners:
+
+1. Fix punctuation, capitalization, and spelling errors
+2. Merge fragments that belong to the same sentence (keep the earliest start_time and latest end_time)
+3. Split run-on sentences into natural speech units (one complete thought per segment)
+4. Remove filler annotations like [Music], [Applause] unless they provide context
+5. Preserve the original meaning exactly — do not paraphrase
+
+Return ONLY a JSON array with this exact format, no markdown fencing:
+[{"start_time": 0.0, "end_time": 2.5, "text": "Hello and welcome."}]
+
+Rules:
+- Timestamps in seconds (float)
+- Ensure no gaps: each end_time should equal the next start_time
+- Ensure monotonically increasing timestamps
+- Return valid JSON only`;

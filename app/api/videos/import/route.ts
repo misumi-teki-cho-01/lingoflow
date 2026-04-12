@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { detectVideoSource } from "@/lib/video-providers";
 import { runTranscriptionPipeline } from "@/lib/pipeline/transcription-pipeline";
+import { getTranscriptByVideoExtId, upsertTranscript } from "@/lib/db/transcripts";
 
 export async function POST(request: Request) {
   try {
@@ -21,21 +22,48 @@ export async function POST(request: Request) {
       );
     }
 
-    // Run the 3-level transcription pipeline:
-    // Level 1: Fetch existing subtitles/CC (fast, free)
-    // Level 2: AI enhancement via Gemini (fast, low cost)
-    // Level 3: Audio transcription fallback (slow, high cost)
+    const videoId = parsed.videoId;
+    const preferredLang = "en"; // Defaulting to en for now
+    
+    // Check Database Cache first
+    const cached = await getTranscriptByVideoExtId(videoId, preferredLang);
+    
+    // If the cache has best quality, return immediately
+    if (cached && (cached.quality === "subtitle-enhanced" || cached.quality === "audio-transcribed")) {
+      return NextResponse.json(
+        {
+          videoId,
+          source: parsed.source,
+          transcript: {
+            segments: cached.segments,
+            source: cached.quality,
+            subtitleType: cached.quality === "subtitle-enhanced" ? "manual" : "auto-generated",
+            aiEnhanced: cached.quality === "subtitle-enhanced",
+            segmentCount: cached.segments.length,
+          },
+        },
+        { status: 200 }
+      );
+    }
+
+    // Run the pipeline (passing initial state if we had a lower-quality cache)
     const result = await runTranscriptionPipeline(
       parsed.source,
-      parsed.videoId,
+      videoId,
+      preferredLang,
+      cached ? { segments: cached.segments, quality: cached.quality } : undefined
     );
 
-    // TODO: Store video + transcript in Supabase when auth is configured.
-    // For now, return the pipeline result directly.
+    // Upsert into DB if pipeline yielded results
+    if (result.source !== "failed" && result.segments.length > 0) {
+      // Fire and forget caching (non-blocking for the response)
+      upsertTranscript(videoId, preferredLang, result.source, result.segments, cached?.transcriptId)
+        .catch(err => console.error("[Video Import] Failed to upsert transcript:", err));
+    }
 
     return NextResponse.json(
       {
-        videoId: parsed.videoId,
+        videoId,
         source: parsed.source,
         transcript: {
           segments: result.segments,

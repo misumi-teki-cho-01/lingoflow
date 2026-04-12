@@ -8,7 +8,7 @@ import { VideoControls } from "@/components/video/video-controls";
 import { TranscriptPanel } from "@/components/transcript/transcript-panel";
 import { EchoEditor, type EchoEditorHandle } from "@/components/scribe/echo-editor";
 import { ConfirmExplainModal } from "./confirm-explain-modal";
-import { fetchAIExplanations } from "@/lib/api/explain";
+import { fetchAIExplanations } from "@/lib/api/ai";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import {

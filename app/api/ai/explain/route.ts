@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateText } from "@/lib/gemini/client";
-import { EXPLAIN_DICTATION_PROMPT } from "@/lib/ai/prompts";
+import { explainTextVocabulary } from "@/lib/ai/services";
 
 export async function POST(request: Request) {
   try {
@@ -13,26 +12,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const prompt = EXPLAIN_DICTATION_PROMPT
-      .replace("{{locale}}", locale)
-      .replace("{{text}}", text);
-
-    const responseText = await generateText(prompt);
-    
-    const cleanJsonStr = responseText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-    
-    let definitions = {};
-    try {
-      definitions = JSON.parse(cleanJsonStr);
-    } catch (parseError) {
-      console.error("[Explain API] JSON Parse Error. Raw output:", responseText);
-      return NextResponse.json(
-        { error: "Failed to parse AI output into JSON." },
-        { status: 500 },
-      );
-    }
-
+    const definitions = await explainTextVocabulary(text, locale);
     return NextResponse.json({ definitions });
+
   } catch (error: any) {
     console.error("[Explain API] Error:", error.message);
     return NextResponse.json(
@@ -41,3 +23,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

@@ -1,24 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import { VideoImportForm } from "@/components/video/video-import-form";
 import { VideoCard, type VideoCardData } from "@/components/video/video-card";
-import { createClient } from "@/lib/supabase/server";
+import { getRecentVideos } from "@/lib/db/videos";
 import { Play, Tv2, AlertCircle } from "lucide-react";
 
 // ── Data fetching ──────────────────────────────────────────────────────────
 async function getImportedVideos(): Promise<VideoCardData[]> {
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("videos")
-      .select(
-        "video_ext_id, title, channel_name, thumbnail_url, duration, source_type"
-      )
-      .order("created_at", { ascending: false })
-      .limit(50);
-    return (data as VideoCardData[]) ?? [];
-  } catch {
-    return [];
-  }
+  const data = await getRecentVideos(50);
+  return (data as VideoCardData[]) ?? [];
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────

@@ -1,10 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { parseVideoUrl } from "@/lib/utils/url-parser";
 import { fetchYouTubeMeta } from "@/lib/utils/youtube-meta";
 import { runTranscriptionPipeline } from "@/lib/pipeline/transcription-pipeline";
+import { getVideoByExtId, insertVideo } from "@/lib/db/videos";
+import { upsertTranscript } from "@/lib/db/transcripts";
 
 export interface ImportVideoState {
   error?: string;   // i18n key, e.g. "invalidUrl" — mapped to t() in the form
@@ -38,14 +39,9 @@ export async function importVideo(
   }
 
   const { videoId, source } = parsed;
-  const supabase = await createClient();
 
   // ── 2. Already imported? ───────────────────────────────────────────────────
-  const { data: existing } = await supabase
-    .from("videos")
-    .select("video_ext_id")
-    .eq("video_ext_id", videoId)
-    .single();
+  const existing = await getVideoByExtId(videoId);
 
   if (existing) {
     redirect(`/${locale}/video/${videoId}`);
@@ -63,9 +59,9 @@ export async function importVideo(
   }
 
   // ── 5. Persist video ───────────────────────────────────────────────────────
-  const { data: video, error: videoErr } = await supabase
-    .from("videos")
-    .insert({
+  let video;
+  try {
+    video = await insertVideo({
       url: parsed.url,
       source_type: source,
       video_ext_id: videoId,
@@ -73,24 +69,17 @@ export async function importVideo(
       channel_name: meta.channelName || null,
       thumbnail_url: meta.thumbnailUrl || null,
       language: "en",
-    })
-    .select("id")
-    .single();
-
-  if (videoErr || !video) {
+    });
+  } catch (videoErr) {
     return { error: "saveFailed" };
   }
 
   // ── 5b. Persist transcript (upsert — pipeline may have already cached it) ──
-  await supabase.from("transcripts").upsert(
-    {
-      video_id: video.id,
-      language: "en",
-      segments: transcriptResult.segments,
-      quality: transcriptResult.source,
-      status: "completed",
-    },
-    { onConflict: "video_id,language" }
+  await upsertTranscript(
+    videoId,
+    "en",
+    transcriptResult.source,
+    transcriptResult.segments
   );
 
   // ── 6. Redirect to study page ─────────────────────────────────────────────

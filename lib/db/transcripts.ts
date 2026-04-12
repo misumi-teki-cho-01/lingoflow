@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { TranscriptSegment } from "@/types/transcript";
-import type { TranscriptSource } from "./transcription-pipeline";
+import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
 
 // Only these quality levels are worth caching
 const CACHEABLE_QUALITIES: TranscriptSource[] = [
@@ -16,7 +16,7 @@ const QUALITY_RANK: Record<string, number> = {
   "subtitle-enhanced": 2,
 };
 
-export interface CacheEntry {
+export interface TranscriptCacheEntry {
   transcriptId: string;
   segments: TranscriptSegment[];
   quality: TranscriptSource;
@@ -25,14 +25,11 @@ export interface CacheEntry {
 /**
  * Reads a cached transcript from the `transcripts` table via the video's
  * external ID (e.g. YouTube video ID stored in videos.video_ext_id).
- *
- * Looks up: videos → transcripts (joined on video_id).
- * Returns the highest-quality available entry, or null if nothing cached.
  */
-export async function readTranscriptCache(
+export async function getTranscriptByVideoExtId(
   videoExtId: string,
   lang: string = "en"
-): Promise<CacheEntry | null> {
+): Promise<TranscriptCacheEntry | null> {
   try {
     const supabase = await createClient();
 
@@ -71,9 +68,10 @@ export async function readTranscriptCache(
  * - If a lower-quality entry exists, upgrades it in-place (UPDATE).
  * - If no entry exists, inserts a new one.
  *
- * This function is intentionally fire-and-forget (non-blocking).
+ * This function is intentionally fire-and-forget (non-blocking) in some contexts,
+ * but returns a Promise so the caller can await it if strict ordering is needed.
  */
-export async function writeTranscriptCache(
+export async function upsertTranscript(
   videoExtId: string,
   lang: string = "en",
   quality: TranscriptSource,
@@ -120,7 +118,7 @@ export async function writeTranscriptCache(
       },
       { onConflict: "video_id,language" }
     );
-  } catch {
-    // Cache write failure is non-fatal
+  } catch (err) {
+    console.error("[DB: Transcript] Failed to upsert transcript:", err);
   }
 }
