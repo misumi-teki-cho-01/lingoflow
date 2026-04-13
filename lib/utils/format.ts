@@ -22,3 +22,11 @@ export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength - 1) + "…";
 }
+
+/**
+ * Normalize a raw word token for vocabulary selection:
+ * strips leading/trailing punctuation and converts to lowercase.
+ */
+export function normalizeWord(raw: string): string {
+  return raw.replace(/^[.,!?;:'"()[\]{}<>]+|[.,!?;:'"()[\]{}<>]+$/g, "").toLowerCase();
+}

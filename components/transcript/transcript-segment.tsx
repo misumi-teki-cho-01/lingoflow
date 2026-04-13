@@ -1,5 +1,5 @@
 import { forwardRef, memo } from "react";
-import { formatTime } from "@/lib/utils/format";
+import { formatTime, normalizeWord } from "@/lib/utils/format";
 import { Play } from "lucide-react";
 import type { TranscriptSegment } from "@/types/transcript";
 
@@ -9,6 +9,9 @@ interface TranscriptSegmentProps {
   isActive: boolean;
   onClick: (time: number) => void;
   searchQuery?: string;
+  wordClickMode?: boolean;
+  selectedWords?: Set<string>;
+  onWordClick?: (word: string) => void;
 }
 
 /** Highlights matching text within a segment for the search query. */
@@ -34,9 +37,57 @@ function HighlightedText({ text, query }: { text: string; query?: string }) {
   );
 }
 
+/** Splits text into tokens (words + whitespace) for word-click mode. */
+function WordClickableText({
+  text,
+  selectedWords,
+  onWordClick,
+}: {
+  text: string;
+  selectedWords?: Set<string>;
+  onWordClick?: (word: string) => void;
+}) {
+  // Split on whitespace boundaries, keeping the separators
+  const tokens = text.split(/(\s+)/);
+
+  return (
+    <>
+      {tokens.map((token, i) => {
+        if (/^\s+$/.test(token)) {
+          return <span key={i}>{token}</span>;
+        }
+        const normalized = normalizeWord(token);
+        if (!normalized) {
+          return <span key={i}>{token}</span>;
+        }
+        const isSelected = selectedWords?.has(normalized) ?? false;
+        return (
+          <span
+            key={i}
+            onClick={(e) => {
+              e.stopPropagation();
+              onWordClick?.(normalized);
+            }}
+            className={`cursor-pointer rounded px-0.5 transition-colors select-none ${
+              isSelected
+                ? "bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100"
+                : "hover:bg-muted"
+            }`}
+          >
+            {token}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
 export const TranscriptSegmentRow = memo(
   forwardRef<HTMLDivElement, TranscriptSegmentProps>(
-    function TranscriptSegmentRow({ segment, isActive, onClick, searchQuery }, ref) {
+    function TranscriptSegmentRow(
+      { segment, isActive, onClick, searchQuery, wordClickMode, selectedWords, onWordClick },
+      ref
+    ) {
       return (
         <div
           ref={ref}
@@ -80,7 +131,15 @@ export const TranscriptSegmentRow = memo(
               ${isActive ? "text-foreground font-medium" : "text-muted-foreground group-hover:text-foreground"}
             `}
           >
-            <HighlightedText text={segment.text} query={searchQuery} />
+            {wordClickMode ? (
+              <WordClickableText
+                text={segment.text}
+                selectedWords={selectedWords}
+                onWordClick={onWordClick}
+              />
+            ) : (
+              <HighlightedText text={segment.text} query={searchQuery} />
+            )}
           </p>
         </div>
       );

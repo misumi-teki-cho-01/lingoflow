@@ -1,14 +1,15 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useVideoPlayer } from "@/hooks/use-video-player";
 import { useTranscriptSync } from "@/hooks/use-transcript-sync";
+import { useVocabularyReview } from "@/hooks/use-vocabulary-review";
 import { VideoControls } from "@/components/video/video-controls";
 import { TranscriptPanel } from "@/components/transcript/transcript-panel";
 import { EchoEditor } from "@/components/scribe/echo-editor";
 import { VocabularyReviewModal } from "./vocabulary-review-modal";
-import { getExplainDictationPrompt } from "@/lib/ai/prompts";
+import { SubtitleEnhanceModal } from "./subtitle-enhance-modal";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import {
@@ -17,9 +18,11 @@ import {
   downloadMarkdown,
   type ExportMetadata,
 } from "@/lib/utils/markdown";
+import { saveEnhancedTranscript } from "@/lib/api/transcripts";
 import type { TranscriptSegment } from "@/types/transcript";
 import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
 import type { YouTubeMeta } from "@/lib/utils/youtube-meta";
+import type { VocabularyExplanation } from "@/lib/ai/services";
 import {
   ChevronLeft,
   Headphones,
@@ -28,9 +31,9 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Copy,
   CheckCircle2,
   TriangleAlert,
+  Wand2,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -41,14 +44,13 @@ export interface StudyRoomProps {
   videoMeta: YouTubeMeta;
   videoUrl: string;
   segments: TranscriptSegment[];
-  initialDefinitions?: Record<string, import("@/lib/ai/services").VocabularyExplanation>;
+  initialDefinitions?: Record<string, VocabularyExplanation>;
   initialDictationHtml?: string | null;
   transcriptSource?: TranscriptSource;
   transcriptError?: string;
   defaultMode?: StudyMode;
 }
 
-type ReviewStep = "review_words" | "paste_json" | "review_ai";
 type FeedbackState = {
   tone: "success" | "error" | "info";
   text: string;
@@ -66,7 +68,7 @@ export function StudyRoom({
   videoId,
   videoMeta,
   videoUrl,
-  segments,
+  segments: initialSegments,
   initialDefinitions = {},
   initialDictationHtml = null,
   transcriptSource,
@@ -78,20 +80,43 @@ export function StudyRoom({
 
   const [mode, setMode] = useState<StudyMode>(defaultMode);
   const [showCC, setShowCC] = useState(false);
-
-  // AI Definition state
-  // AI Definition state
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [highlightedWords, setHighlightedWords] = useState<import("@/components/scribe/echo-editor").HighlightedWord[]>([]);
-  const [definitions, setDefinitions] = useState<Record<string, import("@/lib/ai/services").VocabularyExplanation>>(initialDefinitions);
-  const [reviewStep, setReviewStep] = useState<ReviewStep>("review_words");
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showFeedback = useCallback((next: FeedbackState) => {
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    setFeedback(next);
+    if (next?.tone === "success") {
+      feedbackTimerRef.current = setTimeout(() => setFeedback(null), 3000);
+    }
+  }, []);
+
+  // Live segments (can be updated after AI enhancement)
+  const [liveSegments, setLiveSegments] = useState<TranscriptSegment[]>(initialSegments);
+
+  // CC mode word selection
+  const [ccSelectedWords, setCcSelectedWords] = useState<string[]>([]);
+  const ccSelectedWordSet = useMemo(() => new Set(ccSelectedWords), [ccSelectedWords]);
+
+  // Enhancement modal
+  const [showEnhanceModal, setShowEnhanceModal] = useState(false);
+
+  // Vocabulary review (shared hook)
+  const {
+    showReviewModal,
+    selectedWords,
+    reviewStep,
+    definitions,
+    openReview,
+    closeReview,
+    setDefinitions,
+  } = useVocabularyReview(initialDefinitions);
 
   // ── Player ────────────────────────────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
   const player = useVideoPlayer({ containerRef, videoUrl });
   const { activeSegment, activeSegmentIndex } = useTranscriptSync(
-    segments,
+    liveSegments,
     player.currentTime
   );
 
@@ -104,10 +129,20 @@ export function StudyRoom({
   const playerPlayRef = useRef(player.play);
   playerPlayRef.current = player.play;
 
+  // ── Shared export metadata ─────────────────────────────────────────────────
+  const exportMeta = useMemo((): ExportMetadata => ({
+    title: videoMeta.title || `YouTube · ${videoId}`,
+    url: videoUrl,
+    channelName: videoMeta.channelName || undefined,
+    date: new Date().toLocaleDateString(),
+  }), [videoMeta, videoId, videoUrl]);
+
   // ── Mode change ───────────────────────────────────────────────────────────
   const handleModeChange = useCallback((next: StudyMode) => {
     setMode(next);
     pushModeToUrl(next);
+    // Clear CC word selection when switching away
+    if (next !== "cc") setCcSelectedWords([]);
   }, []);
 
   // ── Global keyboard shortcuts (Scribe mode only) ───────────────────────────
@@ -119,7 +154,6 @@ export function StudyRoom({
       const isEditor = target.contentEditable === "true";
       const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
 
-      // Enter (outside editor) → pause + focus editor
       if (e.key === "Enter" && !isEditor && !isInput) {
         e.preventDefault();
         playerPauseRef.current();
@@ -134,92 +168,63 @@ export function StudyRoom({
 
   // ── Export ────────────────────────────────────────────────────────────────
   const handleExport = () => {
-    const meta: ExportMetadata = {
-      title: videoMeta.title || `YouTube · ${videoId}`,
-      url: videoUrl,
-      channelName: videoMeta.channelName || undefined,
-      date: new Date().toLocaleDateString(),
-    };
     const safeName = (videoMeta.title || videoId).replace(/[^a-z0-9]/gi, "_").toLowerCase();
 
     if (mode === "scribe") {
       const html = editorRef.current?.getHtml() ?? "";
-      const md = convertToMarkdown(html, meta);
+      const md = convertToMarkdown(html, exportMeta);
       downloadMarkdown(md, `EchoScribe_${safeName}.md`);
     } else {
-      const md = convertTranscriptToMarkdown(segments, meta);
+      const md = convertTranscriptToMarkdown(liveSegments, exportMeta);
       downloadMarkdown(md, `Transcript_${safeName}.md`);
     }
   };
 
-  // ── Main UI Handlers ─────────────────────────────────────────────────────
-  const openVocabularyReview = () => {
+  // ── Context text providers (for VocabularyReviewModal) ────────────────────
+  const getScribeContextText = useCallback(async (): Promise<string> => {
+    const html = editorRef.current?.getHtml() ?? "";
+    return convertToMarkdown(html, exportMeta);
+  }, [exportMeta]);
+
+  const getCCContextText = useCallback(async (): Promise<string> => {
+    return convertTranscriptToMarkdown(liveSegments, exportMeta);
+  }, [liveSegments, exportMeta]);
+
+  // ── CC word selection ─────────────────────────────────────────────────────
+  const handleCCWordClick = useCallback((word: string) => {
+    setCcSelectedWords((prev) =>
+      prev.includes(word) ? prev.filter((w) => w !== word) : [...prev, word]
+    );
+  }, []);
+
+  const handleCCWordsClear = useCallback(() => {
+    setCcSelectedWords([]);
+  }, []);
+
+  // ── Vocabulary review — Scribe ────────────────────────────────────────────
+  const openScribeVocabularyReview = () => {
     if (!editorRef.current) return;
     const words = editorRef.current.getHighlightedWords();
     if (words.length === 0) {
-      setFeedback({ tone: "error", text: t("noVocabularySelected") });
+      showFeedback({ tone: "error", text: t("noVocabularySelected") });
       return;
     }
-    setHighlightedWords(words);
-    setReviewStep("review_words");
-    setShowReviewModal(true);
+    openReview(words);
   };
 
-  const handleCopyPrompt = async (): Promise<{ ok: boolean; message: string }> => {
-    if (!editorRef.current) {
-      return { ok: false, message: t("copyPromptFailed") };
-    }
+  // ── Vocabulary review — CC ─────────────────────────────────────────────────
+  const openCCVocabularyReview = useCallback(() => {
+    if (ccSelectedWords.length === 0) return;
+    const words = ccSelectedWords.map((w, i) => ({ id: `cc-word-${i}-${w}`, text: w }));
+    openReview(words);
+  }, [ccSelectedWords, openReview]);
 
-    const html = editorRef.current.getHtml() ?? "";
-    const meta: ExportMetadata = {
-      title: videoMeta.title || `YouTube · ${videoId}`,
-      url: videoUrl,
-      channelName: videoMeta.channelName || undefined,
-      date: new Date().toLocaleDateString(),
-    };
-    const md = convertToMarkdown(html, meta);
-    const words = editorRef.current.getHighlightedWords().map(w => w.text);
-
-    if (words.length === 0) {
-      return { ok: false, message: t("noVocabularySelected") };
-    }
-
-    const promptTemplate = getExplainDictationPrompt(locale);
-    const promptText = promptTemplate
-      .replace("{{text}}", md)
-      .replace("{{words}}", JSON.stringify(words, null, 2));
-
-    try {
-      await navigator.clipboard.writeText(promptText);
-      setFeedback({ tone: "success", text: t("promptCopied") });
-      return { ok: true, message: t("promptCopied") };
-    } catch (err) {
-      console.error("Failed to copy text: ", err);
-      setFeedback({ tone: "error", text: t("copyPromptFailed") });
-      return { ok: false, message: t("copyPromptFailed") };
-    }
-  };
-
-  const handleCopyPromptAndOpenPaste = async () => {
-    if (!editorRef.current) return;
-    const words = editorRef.current.getHighlightedWords();
-    if (words.length === 0) {
-      setFeedback({ tone: "error", text: t("noVocabularySelected") });
-      return;
-    }
-
-    setHighlightedWords(words);
-    setReviewStep("paste_json");
-    setShowReviewModal(true);
-    await handleCopyPrompt();
-  };
-
-  const handleSaveVocabulary = async (
-    finalData: Record<string, import("@/lib/ai/services").VocabularyExplanation>, 
-    transforms: { id: string, newText: string }[],
+  // ── Save vocabulary — Scribe ──────────────────────────────────────────────
+  const handleSaveScribeVocabulary = async (
+    finalData: Record<string, VocabularyExplanation>,
+    transforms: { id: string; newText: string }[],
     options: { persistReviewedTranscript: boolean }
   ) => {
-    // 1. Save to database via dedicated save endpoint
     const { saveVocabularyToDB } = await import("@/lib/api/ai");
     await saveVocabularyToDB(videoId, finalData, {
       dictation: options.persistReviewedTranscript
@@ -229,18 +234,38 @@ export function StudyRoom({
           }
         : undefined,
     });
-    
-    // 2. Synchronize Tiptap Editor if the user corrected typos in the modal
+
     if (editorRef.current && transforms.length > 0) {
-      transforms.forEach(t => {
-        editorRef.current!.updateHighlightedWord(t.id, t.newText);
+      transforms.forEach((tr) => {
+        editorRef.current!.updateHighlightedWord(tr.id, tr.newText);
       });
     }
 
-    // 3. Update local state so hover dictionary pops up immediately
-    setDefinitions(prev => ({ ...prev, ...finalData }));
-    setFeedback({ tone: "success", text: t("saveSuccess") });
-    setShowReviewModal(false);
+    setDefinitions((prev) => ({ ...prev, ...finalData }));
+    showFeedback({ tone: "success", text: t("saveSuccess") });
+    closeReview();
+  };
+
+  // ── Save vocabulary — CC ──────────────────────────────────────────────────
+  const handleSaveCCVocabulary = async (
+    finalData: Record<string, VocabularyExplanation>,
+    _transforms: { id: string; newText: string }[],
+    _options: { persistReviewedTranscript: boolean }
+  ) => {
+    const { saveVocabularyToDB } = await import("@/lib/api/ai");
+    await saveVocabularyToDB(videoId, finalData);
+    setDefinitions((prev) => ({ ...prev, ...finalData }));
+    setCcSelectedWords([]);
+    showFeedback({ tone: "success", text: t("saveSuccess") });
+    closeReview();
+  };
+
+  // ── Save enhanced subtitles ───────────────────────────────────────────────
+  const handleSaveEnhancedTranscript = async (enhanced: TranscriptSegment[]) => {
+    await saveEnhancedTranscript(videoId, enhanced);
+    setLiveSegments(enhanced);
+    setShowEnhanceModal(false);
+    showFeedback({ tone: "success", text: t("enhanceSaveSuccess") });
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -295,30 +320,45 @@ export function StudyRoom({
           </button>
         </div>
 
-        {/* Export and AI Actions */}
+        {/* Action buttons */}
         <div className="flex items-center gap-2 shrink-0">
           {mode === "scribe" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openScribeVocabularyReview}
+              className="h-8 gap-1.5 text-xs text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {t("aiExplain")}
+            </Button>
+          )}
+
+          {mode === "cc" && (
             <>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={openVocabularyReview} 
-                className="h-8 gap-1.5 text-xs text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                {t("aiExplain")}
-              </Button>
+              {ccSelectedWords.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openCCVocabularyReview}
+                  className="h-8 gap-1.5 text-xs text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {t("aiExplain")} ({ccSelectedWords.length})
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleCopyPromptAndOpenPaste}
-                className="h-8 gap-1.5 text-xs"
+                onClick={() => setShowEnhanceModal(true)}
+                className="h-8 gap-1.5 text-xs text-violet-500 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-500/10 border-violet-200 dark:border-violet-500/30"
               >
-                <Copy className="h-3.5 w-3.5" />
-                {t("copyPrompt")}
+                <Wand2 className="h-3.5 w-3.5" />
+                {t("enhanceSubtitles")}
               </Button>
             </>
           )}
+
           <Button variant="outline" size="sm" onClick={handleExport} className="h-8 gap-1.5 text-xs">
             <Download className="h-3.5 w-3.5" />
             {t("exportMd")}
@@ -326,6 +366,7 @@ export function StudyRoom({
         </div>
       </header>
 
+      {/* ── Feedback banner ── */}
       {feedback && (
         <div className="px-4 pt-3 shrink-0">
           <div
@@ -339,10 +380,8 @@ export function StudyRoom({
           >
             {feedback.tone === "success" ? (
               <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
-            ) : feedback.tone === "error" ? (
-              <TriangleAlert className="h-4 w-4 mt-0.5 shrink-0" />
             ) : (
-              <Sparkles className="h-4 w-4 mt-0.5 shrink-0" />
+              <TriangleAlert className="h-4 w-4 mt-0.5 shrink-0" />
             )}
             <span>{feedback.text}</span>
           </div>
@@ -434,27 +473,41 @@ export function StudyRoom({
             />
           ) : (
             <TranscriptPanel
-              segments={segments}
+              segments={liveSegments}
               activeSegmentIndex={activeSegmentIndex}
               onSegmentClick={player.seekTo}
               source={transcriptSource}
               errorMessage={transcriptError}
+              wordClickMode
+              selectedWords={ccSelectedWordSet}
+              onWordClick={handleCCWordClick}
+              onClearWords={handleCCWordsClear}
+              onExplainWords={openCCVocabularyReview}
             />
           )}
         </section>
 
       </main>
 
-      {/* Vocabulary Extractor 2-Step Modal */}
+      {/* ── Vocabulary Review Modal ── */}
       <VocabularyReviewModal
         visible={showReviewModal}
-        initialWords={highlightedWords}
+        initialWords={selectedWords}
         initialStep={reviewStep}
-        onCancel={() => setShowReviewModal(false)}
-        onSave={handleSaveVocabulary}
-        onCopyPrompt={handleCopyPrompt}
-        onFeedback={setFeedback}
+        onCancel={closeReview}
+        onSave={mode === "scribe" ? handleSaveScribeVocabulary : handleSaveCCVocabulary}
+        getContextText={mode === "scribe" ? getScribeContextText : getCCContextText}
+        showPersistOption={mode === "scribe"}
+        onFeedback={showFeedback}
+      />
+
+      {/* ── Subtitle Enhancement Modal ── */}
+      <SubtitleEnhanceModal
+        visible={showEnhanceModal}
+        segments={liveSegments}
+        onCancel={() => setShowEnhanceModal(false)}
+        onSave={handleSaveEnhancedTranscript}
       />
     </div>
-  )
-};
+  );
+}

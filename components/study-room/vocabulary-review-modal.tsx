@@ -1,21 +1,43 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Copy, FileJson, Save, TriangleAlert } from "lucide-react";
+import { JsonValidationBadge } from "@/components/ui/json-validation-badge";
+import {
+  CheckCircle2,
+  Copy,
+  FileJson,
+  Save,
+  TriangleAlert,
+  ChevronLeft,
+  Languages,
+  Loader2,
+} from "lucide-react";
 import type { VocabularyExplanation } from "@/lib/ai/services";
-import type { HighlightedWord } from "@/components/scribe/echo-editor";
+import type { SelectedWord } from "@/hooks/use-vocabulary-review";
+import { getExplainDictationPrompt } from "@/lib/ai/prompts";
+import { useJsonValidation } from "@/hooks/use-json-validation";
 
-type Step = "review_words" | "paste_json" | "review_ai";
+export type { SelectedWord };
+
+type Step = "review_words" | "prompt_editor" | "paste_json" | "review_ai";
 type Notice = {
   tone: "success" | "error" | "info";
   text: string;
 } | null;
 
+const PROMPT_LANGUAGE_KEY = "lingo-prompt-language";
+
+const LANGUAGE_OPTIONS = [
+  { value: "zh", label: "中文" },
+  { value: "ja", label: "日本語" },
+  { value: "en", label: "English" },
+];
+
 export interface VocabularyReviewModalProps {
   visible: boolean;
-  initialWords: HighlightedWord[];
+  initialWords: SelectedWord[];
   initialStep?: Step;
   onCancel: () => void;
   onSave: (
@@ -23,7 +45,8 @@ export interface VocabularyReviewModalProps {
     transforms: { id: string; newText: string }[],
     options: { persistReviewedTranscript: boolean }
   ) => Promise<void>;
-  onCopyPrompt: () => Promise<{ ok: boolean; message: string }>;
+  getContextText: () => Promise<string>;
+  showPersistOption?: boolean;
   onFeedback?: (notice: Notice) => void;
 }
 
@@ -70,10 +93,12 @@ export function VocabularyReviewModal({
   initialStep = "review_words",
   onCancel,
   onSave,
-  onCopyPrompt,
+  getContextText,
+  showPersistOption = false,
   onFeedback,
 }: VocabularyReviewModalProps) {
   const t = useTranslations("studyRoom");
+  const locale = useLocale();
 
   const [step, setStep] = useState<Step>(initialStep);
   const [rows, setRows] = useState<RowState[]>([]);
@@ -81,6 +106,24 @@ export function VocabularyReviewModal({
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [persistReviewedTranscript, setPersistReviewedTranscript] = useState(true);
+
+  const pasteTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const jsonValidation = useJsonValidation(
+    step === "paste_json" ? pastedJson : "",
+    "vocabulary"
+  );
+
+  // Prompt editor state
+  const [promptLanguage, setPromptLanguage] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(PROMPT_LANGUAGE_KEY) || locale;
+    }
+    return locale;
+  });
+  const [editablePrompt, setEditablePrompt] = useState("");
+  const [isLoadingPrompt, setIsLoadingPrompt] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
+  const fetchedContextRef = useRef<string>("");
 
   useEffect(() => {
     if (!visible) return;
@@ -90,6 +133,9 @@ export function VocabularyReviewModal({
     setIsSaving(false);
     setNotice(null);
     setPersistReviewedTranscript(true);
+    setEditablePrompt("");
+    setPromptCopied(false);
+    fetchedContextRef.current = "";
     setRows(
       initialWords.map((w) => ({
         id: w.id,
@@ -98,7 +144,10 @@ export function VocabularyReviewModal({
         explanation: "",
       }))
     );
-  }, [visible, initialWords, initialStep]);
+    // Read persisted language preference
+    const saved = typeof window !== "undefined" ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
+    setPromptLanguage(saved || locale);
+  }, [visible, initialWords, initialStep, locale]);
 
   const uniqueWords = useMemo(
     () => Array.from(new Set(rows.map((row) => row.original_text).filter(Boolean))),
@@ -116,15 +165,47 @@ export function VocabularyReviewModal({
     setRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
-  const handleCopyPrompt = async () => {
-    const result = await onCopyPrompt();
-    const nextNotice: Notice = {
-      tone: result.ok ? "success" : "error",
-      text: result.message,
-    };
-    updateNotice(nextNotice);
-    if (result.ok) {
+  const buildPrompt = (context: string, lang: string) => {
+    const template = getExplainDictationPrompt(lang);
+    return template
+      .replace("{{text}}", context)
+      .replace("{{words}}", JSON.stringify(uniqueWords, null, 2));
+  };
+
+  const handleGoToPromptEditor = async () => {
+    setIsLoadingPrompt(true);
+    try {
+      let ctx = fetchedContextRef.current;
+      if (!ctx) {
+        ctx = await getContextText();
+        fetchedContextRef.current = ctx;
+      }
+      setEditablePrompt(buildPrompt(ctx, promptLanguage));
+      setStep("prompt_editor");
+    } catch {
+      updateNotice({ tone: "error", text: t("copyPromptFailed") });
+    } finally {
+      setIsLoadingPrompt(false);
+    }
+  };
+
+  const handleLanguageChange = (lang: string) => {
+    setPromptLanguage(lang);
+    localStorage.setItem(PROMPT_LANGUAGE_KEY, lang);
+    if (fetchedContextRef.current) {
+      setEditablePrompt(buildPrompt(fetchedContextRef.current, lang));
+    }
+  };
+
+  const handleCopyAndContinue = async () => {
+    try {
+      await navigator.clipboard.writeText(editablePrompt);
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 1500);
+      updateNotice({ tone: "success", text: t("promptCopiedToast") });
       setStep("paste_json");
+    } catch {
+      updateNotice({ tone: "error", text: t("copyPromptFailed") });
     }
   };
 
@@ -203,27 +284,35 @@ export function VocabularyReviewModal({
         ? "border-red-300/70 bg-red-50 text-red-700"
         : "border-sky-300/70 bg-sky-50 text-sky-700";
 
+  const stepTitle = {
+    review_words: t("reviewSelectionTitle"),
+    prompt_editor: t("promptEditorTitle"),
+    paste_json: t("pasteJsonTitle"),
+    review_ai: t("reviewDefinitionsTitle"),
+  }[step];
+
+  const stepDesc = {
+    review_words: t("reviewSelectionDesc"),
+    prompt_editor: t("promptEditorDesc"),
+    paste_json: t("pasteJsonDesc"),
+    review_ai: t("reviewDefinitionsDesc"),
+  }[step];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-4xl max-h-[85vh] flex flex-col rounded-xl border border-border bg-card shadow-lg animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+        {/* Header */}
         <div className="px-6 py-4 border-b border-border shrink-0 flex items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold">
-              {step === "review_words" && t("reviewSelectionTitle")}
-              {step === "paste_json" && t("pasteJsonTitle")}
-              {step === "review_ai" && t("reviewDefinitionsTitle")}
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {step === "review_words" && t("reviewSelectionDesc")}
-              {step === "paste_json" && t("pasteJsonDesc")}
-              {step === "review_ai" && t("reviewDefinitionsDesc")}
-            </p>
+            <h3 className="text-lg font-semibold">{stepTitle}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{stepDesc}</p>
           </div>
           <Button variant="outline" onClick={onCancel} disabled={isSaving}>
             {t("close")}
           </Button>
         </div>
 
+        {/* Notice */}
         {notice && (
           <div className={`mx-6 mt-4 rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${noticeClassName}`}>
             {notice.tone === "success" ? (
@@ -237,12 +326,63 @@ export function VocabularyReviewModal({
           </div>
         )}
 
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 bg-muted/10 custom-scrollbar">
           {rows.length === 0 ? (
             <div className="text-center text-muted-foreground py-10">
               {t("noVocabularySelected")}
             </div>
+          ) : step === "prompt_editor" ? (
+            /* ── Prompt Editor ── */
+            <div className="space-y-4">
+              {/* Language selector */}
+              <div className="flex items-center gap-3">
+                <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium shrink-0">{t("promptLanguage")}</span>
+                <div className="flex items-center gap-1 rounded-full border border-border bg-muted/30 p-0.5">
+                  {LANGUAGE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleLanguageChange(opt.value)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                        promptLanguage === opt.value
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selected words reminder */}
+              <div className="rounded-lg border border-border bg-background px-4 py-3">
+                <div className="text-sm font-medium">{t("selectedWords")}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {uniqueWords.map((word) => (
+                    <span
+                      key={word}
+                      className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs text-indigo-700"
+                    >
+                      {word}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Editable prompt */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("promptEditableLabel")}</label>
+                <textarea
+                  value={editablePrompt}
+                  onChange={(e) => setEditablePrompt(e.target.value)}
+                  className="min-h-[380px] w-full rounded-lg border border-input bg-background px-3 py-3 text-xs font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring custom-scrollbar"
+                />
+              </div>
+            </div>
           ) : step === "paste_json" ? (
+            /* ── Paste JSON ── */
             <div className="space-y-4">
               <div className="rounded-lg border border-border bg-background px-4 py-3">
                 <div className="text-sm font-medium">{t("selectedWords")}</div>
@@ -264,14 +404,27 @@ export function VocabularyReviewModal({
                 </label>
                 <textarea
                   id="vocabulary-json"
+                  ref={pasteTextareaRef}
                   value={pastedJson}
                   onChange={(e) => setPastedJson(e.target.value)}
                   placeholder={t("pasteJsonPlaceholder")}
-                  className="min-h-[280px] w-full rounded-lg border border-input bg-background px-3 py-3 text-sm font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring custom-scrollbar"
+                  className={`min-h-[280px] w-full rounded-lg border bg-background px-3 py-3 text-sm font-mono focus-visible:outline-none focus-visible:ring-1 custom-scrollbar transition-colors ${
+                    jsonValidation.status === "invalid"
+                      ? "border-red-400 focus-visible:ring-red-400"
+                      : jsonValidation.status === "valid"
+                        ? "border-emerald-400 focus-visible:ring-emerald-400"
+                        : "border-input focus-visible:ring-ring"
+                  }`}
+                />
+                <JsonValidationBadge
+                  validation={jsonValidation}
+                  onJump={() => jsonValidation.jumpToError(pasteTextareaRef.current)}
+                  validLabel={`✓ 共 ${jsonValidation.itemCount} 条释义`}
                 />
               </div>
             </div>
           ) : (
+            /* ── Review words / Review AI ── */
             <div className="w-full border rounded-lg overflow-hidden bg-background">
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted text-muted-foreground font-medium border-b">
@@ -317,27 +470,50 @@ export function VocabularyReviewModal({
           )}
         </div>
 
+        {/* Footer */}
         <div className="px-6 py-4 border-t border-border shrink-0 bg-muted/20 flex gap-3 justify-end items-center">
           {step === "review_words" && rows.length > 0 && (
             <>
               <Button variant="outline" onClick={() => setStep("paste_json")}>
                 {t("goToPasteJson")}
               </Button>
-              <Button onClick={handleCopyPrompt} className="gap-2">
-                <Copy className="h-4 w-4" />
-                {t("copyPrompt")}
+              <Button onClick={handleGoToPromptEditor} disabled={isLoadingPrompt} className="gap-2">
+                {isLoadingPrompt ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {isLoadingPrompt ? t("loadingPrompt") : t("goToPromptEditor")}
+              </Button>
+            </>
+          )}
+
+          {step === "prompt_editor" && (
+            <>
+              <Button variant="outline" onClick={() => setStep("review_words")} className="gap-2">
+                <ChevronLeft className="h-4 w-4" />
+                {t("backToSelection")}
+              </Button>
+              <Button
+                onClick={handleCopyAndContinue}
+                disabled={!editablePrompt.trim()}
+                className="gap-2"
+              >
+                {promptCopied ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {t("copyAndContinue")}
               </Button>
             </>
           )}
 
           {step === "paste_json" && (
             <>
-              <Button variant="outline" onClick={() => setStep("review_words")}>
-                {t("backToSelection")}
-              </Button>
-              <Button variant="outline" onClick={handleCopyPrompt} className="gap-2">
-                <Copy className="h-4 w-4" />
-                {t("copyPrompt")}
+              <Button variant="outline" onClick={() => setStep("prompt_editor")} className="gap-2">
+                <ChevronLeft className="h-4 w-4" />
+                {t("backToPromptEditor")}
               </Button>
               <Button onClick={handleApplyJson} disabled={!pastedJson.trim()} className="gap-2">
                 <FileJson className="h-4 w-4" />
@@ -348,19 +524,22 @@ export function VocabularyReviewModal({
 
           {step === "review_ai" && (
             <>
-              <div className="mr-auto flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2">
-                <input
-                  id="persist-reviewed-transcript"
-                  type="checkbox"
-                  checked={persistReviewedTranscript}
-                  onChange={(e) => setPersistReviewedTranscript(e.target.checked)}
-                  className="h-4 w-4 rounded border border-input"
-                />
-                <Label htmlFor="persist-reviewed-transcript" className="text-xs text-muted-foreground leading-5">
-                  {t("persistReviewedTranscript")}
-                </Label>
-              </div>
-              <Button variant="outline" onClick={() => setStep("paste_json")} disabled={isSaving}>
+              {showPersistOption && (
+                <div className="mr-auto flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2">
+                  <input
+                    id="persist-reviewed-transcript"
+                    type="checkbox"
+                    checked={persistReviewedTranscript}
+                    onChange={(e) => setPersistReviewedTranscript(e.target.checked)}
+                    className="h-4 w-4 rounded border border-input"
+                  />
+                  <Label htmlFor="persist-reviewed-transcript" className="text-xs text-muted-foreground leading-5">
+                    {t("persistReviewedTranscript")}
+                  </Label>
+                </div>
+              )}
+              <Button variant="outline" onClick={() => setStep("paste_json")} disabled={isSaving} className="gap-2">
+                <ChevronLeft className="h-4 w-4" />
                 {t("backToPasteJson")}
               </Button>
               <Button onClick={handleSave} disabled={isSaving} className="gap-2">

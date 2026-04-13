@@ -84,7 +84,18 @@ export async function upsertTranscript(
     const supabase = await createClient();
 
     if (existingTranscriptId) {
-      // Upgrade existing row to better quality
+      // Only upgrade — never overwrite a higher-quality transcript with a lower one
+      const { data: existing } = await supabase
+        .from("transcripts")
+        .select("quality")
+        .eq("id", existingTranscriptId)
+        .single();
+
+      if (existing && (QUALITY_RANK[existing.quality ?? ""] ?? -1) > (QUALITY_RANK[quality] ?? -1)) {
+        console.log(`[DB: Transcript] Skipping write — existing quality "${existing.quality}" is better than "${quality}"`);
+        return;
+      }
+
       await supabase
         .from("transcripts")
         .update({

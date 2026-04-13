@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ScrollText, Search, MousePointerClick, X, Check } from "lucide-react";
+import { ScrollText, Search, MousePointerClick, X, Check, Sparkles } from "lucide-react";
 import { TranscriptSegmentRow } from "./transcript-segment";
 import type { TranscriptSegment } from "@/types/transcript";
 import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
@@ -18,6 +18,11 @@ interface TranscriptPanelProps {
   source?: TranscriptSource;
   isLoading?: boolean;
   errorMessage?: string;
+  wordClickMode?: boolean;
+  selectedWords?: Set<string>;
+  onWordClick?: (word: string) => void;
+  onExplainWords?: () => void;
+  onClearWords?: () => void;
 }
 
 export function TranscriptPanel({
@@ -27,6 +32,11 @@ export function TranscriptPanel({
   source,
   isLoading = false,
   errorMessage,
+  wordClickMode = false,
+  selectedWords,
+  onWordClick,
+  onExplainWords,
+  onClearWords,
 }: TranscriptPanelProps) {
   const t = useTranslations("transcript");
 
@@ -56,6 +66,8 @@ export function TranscriptPanel({
     if (activeSegmentIndex < 0 || !isAutoScrollEnabled) return;
     activeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [activeSegmentIndex, isAutoScrollEnabled]);
+
+  const selectedCount = selectedWords?.size ?? 0;
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoading) {
@@ -109,40 +121,60 @@ export function TranscriptPanel({
             )}
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-8 w-8 transition-colors ${
-              isAutoScrollEnabled
-                ? "text-primary bg-primary/10 hover:bg-primary/20"
-                : "text-muted-foreground"
-            }`}
-            onClick={() => setIsAutoScrollEnabled((v) => !v)}
-            title={t("autoScroll")}
-          >
-            <MousePointerClick className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {wordClickMode && selectedCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs px-2 text-muted-foreground"
+                onClick={onClearWords}
+              >
+                {t("clearSelection")}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 transition-colors ${
+                isAutoScrollEnabled
+                  ? "text-primary bg-primary/10 hover:bg-primary/20"
+                  : "text-muted-foreground"
+              }`}
+              onClick={() => setIsAutoScrollEnabled((v) => !v)}
+              title={t("autoScroll")}
+            >
+              <MousePointerClick className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        {/* Search bar */}
-        <div className="relative mb-3">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t("searchPlaceholder")}
-            className="h-8 pl-8 pr-7 text-xs bg-background/50 border-none ring-1 ring-border focus-visible:ring-primary/50"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+        {wordClickMode && (
+          <div className="mb-3 px-1 text-xs text-muted-foreground">
+            {t("wordClickHint")}
+          </div>
+        )}
+
+        {/* Search bar — hidden in word click mode to keep UI focused */}
+        {!wordClickMode && (
+          <div className="relative mb-3">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              className="h-8 pl-8 pr-7 text-xs bg-background/50 border-none ring-1 ring-border focus-visible:ring-primary/50"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Scrollable segment list */}
@@ -163,6 +195,9 @@ export function TranscriptPanel({
                   isActive={originalIndex === activeSegmentIndex}
                   onClick={onSegmentClick}
                   searchQuery={searchQuery}
+                  wordClickMode={wordClickMode}
+                  selectedWords={selectedWords}
+                  onWordClick={onWordClick}
                 />
               );
             })
@@ -175,8 +210,8 @@ export function TranscriptPanel({
         </div>
       </div>
 
-      {/* "Follow progress" floating button — visible when auto-scroll is off */}
-      {!isAutoScrollEnabled && activeSegmentIndex >= 0 && (
+      {/* "Follow progress" floating button — visible when auto-scroll is off (only in non-word-click mode) */}
+      {!wordClickMode && !isAutoScrollEnabled && activeSegmentIndex >= 0 && (
         <div className="absolute bottom-4 right-4 animate-in fade-in slide-in-from-bottom-2">
           <Button
             size="sm"
@@ -188,6 +223,20 @@ export function TranscriptPanel({
           >
             <Check className="h-3.5 w-3.5" />
             <span>{t("followProgress")}</span>
+          </Button>
+        </div>
+      )}
+
+      {/* "Explain N words" floating button — visible when words are selected */}
+      {wordClickMode && selectedCount > 0 && (
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4 animate-in fade-in slide-in-from-bottom-2 z-10">
+          <Button
+            size="sm"
+            onClick={onExplainWords}
+            className="h-9 shadow-lg gap-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {t("explainWords", { count: selectedCount })}
           </Button>
         </div>
       )}
