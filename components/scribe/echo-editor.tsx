@@ -6,6 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
 import Placeholder from "@tiptap/extension-placeholder";
 import Paragraph from "@tiptap/extension-paragraph";
+import { Markdown } from "tiptap-markdown";
 import { DictionaryPopover } from "./dictionary-popover";
 import type { TranscriptSegment } from "@/types/transcript";
 
@@ -112,6 +113,7 @@ export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
                 TimestampedParagraph,
                 Highlight.configure({ multicolor: true }),
                 Placeholder.configure({ placeholder: t("editorPlaceholder") }),
+                Markdown.configure({ transformPastedText: true }),
             ],
             // Restore draft content on mount (only if draftKey is provided)
             content: draftKey
