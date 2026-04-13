@@ -1,14 +1,20 @@
 "use client";
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
 import Placeholder from "@tiptap/extension-placeholder";
 import Paragraph from "@tiptap/extension-paragraph";
-import { toggleMark } from "prosemirror-commands";
 import { DictionaryPopover } from "./dictionary-popover";
-// ── Custom paragraph extension ─────────────────────────────────────────────
+import type { TranscriptSegment } from "@/types/transcript";
+
+export interface HighlightedWord {
+    id: string; // Keeping interface compatibility, but we just use index now
+    text: string;
+}
+
+// ── Custom extensions ─────────────────────────────────────────────
 const TimestampedParagraph = Paragraph.extend({
     addAttributes() {
         return {
@@ -21,10 +27,14 @@ const TimestampedParagraph = Paragraph.extend({
         };
     },
 });
+
 // ── Imperative handle ──────────────────────────────────────────────────────
 export interface EchoEditorHandle {
     getHtml: () => string;
     isEmpty: () => boolean;
+    getHighlightedWords: () => HighlightedWord[];
+    getTranscriptSegments: () => TranscriptSegment[];
+    updateHighlightedWord: (id: string, newText: string) => void;
 }
 // ── Props ──────────────────────────────────────────────────────────────────
 export interface EchoEditorProps {
@@ -32,22 +42,29 @@ export interface EchoEditorProps {
     currentTime: number;
     /** localStorage key suffix for draft persistence. Omit to disable autosave. */
     draftKey?: string;
+    initialContent?: string | null;
     className?: string;
-    definitions?: Record<string, string>;
+    definitions?: Record<string, import("@/lib/ai/services").VocabularyExplanation>;
 }
 // ── localStorage helpers ───────────────────────────────────────────────────
 const DRAFT_PREFIX = "echo-draft-";
-function loadDraft(key: string): object | null {
+function loadDraft(key: string): string | object | null {
     try {
         const raw = localStorage.getItem(DRAFT_PREFIX + key);
-        return raw ? JSON.parse(raw) : null;
+        // Try parsing JSON first (for backwards compatibility),
+        // but if it fails or it's a raw string, return standard string HTML.
+        if (raw?.startsWith("{")) {
+            return JSON.parse(raw);
+        }
+        return raw; 
     } catch {
         return null;
     }
 }
-function saveDraft(key: string, json: object) {
+function saveDraft(key: string, data: string | object) {
     try {
-        localStorage.setItem(DRAFT_PREFIX + key, JSON.stringify(json));
+        const payload = typeof data === 'string' ? data : JSON.stringify(data);
+        localStorage.setItem(DRAFT_PREFIX + key, payload);
     } catch {
         // If storage is full, fail silently
     }
@@ -61,27 +78,32 @@ function debounce<T extends (...args: Parameters<T>) => void>(fn: T, ms: number)
 }
 // ── Component ──────────────────────────────────────────────────────────────
 export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
-    function EchoEditor({ onCommit, currentTime, draftKey, className, definitions = {} }, ref) {
+    function EchoEditor({ onCommit, currentTime, draftKey, initialContent, className, definitions = {} }, ref) {
         const t = useTranslations("scribe");
         
         // Popover state
-        const [popup, setPopup] = useState<{ visible: boolean; x: number; y: number; word: string; meaning: string }>({
+        const [popup, setPopup] = useState<{ visible: boolean; x: number; y: number; wordData?: import("@/lib/ai/services").VocabularyExplanation }>({
             visible: false,
             x: 0,
             y: 0,
-            word: "",
-            meaning: ""
+            wordData: undefined
         });
 
         const onCommitRef = useRef(onCommit);
-        onCommitRef.current = onCommit;
         const currentTimeRef = useRef(currentTime);
-        currentTimeRef.current = currentTime;
         const draftKeyRef = useRef(draftKey);
-        draftKeyRef.current = draftKey;
+        useEffect(() => {
+            onCommitRef.current = onCommit;
+        }, [onCommit]);
+        useEffect(() => {
+            currentTimeRef.current = currentTime;
+        }, [currentTime]);
+        useEffect(() => {
+            draftKeyRef.current = draftKey;
+        }, [draftKey]);
         // Debounced save — writes to localStorage at most once per 1.5s
         const debouncedSave = useRef(
-            debounce((key: string, json: object) => saveDraft(key, json), 1500)
+            debounce((key: string, data: string | object) => saveDraft(key, data), 1500)
         ).current;
         const editor = useEditor({
             immediatelyRender: false,
@@ -92,91 +114,15 @@ export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
                 Placeholder.configure({ placeholder: t("editorPlaceholder") }),
             ],
             // Restore draft content on mount (only if draftKey is provided)
-            content: draftKey ? (loadDraft(draftKey) ?? undefined) : undefined,
+            content: draftKey
+                ? (loadDraft(draftKey) ?? initialContent ?? undefined)
+                : (initialContent ?? undefined),
             editorProps: {
                 attributes: {
                     class:
                         "prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[400px] h-full px-4 py-4",
                 },
                 handleKeyDown: (view, event) => {
-                    const { state, dispatch } = view;
-                    const { tr, selection, schema } = state;
-                    const boldType = schema.marks.bold;
-
-                    // Space intercept: break out of bold so subsequent typing is unbolded
-                    if (event.key === " " && boldType) {
-                        let isBold = false;
-                        if (state.storedMarks) {
-                            isBold = !!boldType.isInSet(state.storedMarks);
-                        } else {
-                            isBold = !!boldType.isInSet(selection.$from.marks());
-                        }
-
-                        if (isBold) {
-                            event.preventDefault();
-                            const { from } = selection;
-                            tr.insertText(" ");
-                            tr.removeMark(from, from + 1, boldType);
-                            
-                            const marks = (tr.storedMarks || tr.selection.$from.marks()).filter(m => m.type !== boldType);
-                            tr.setStoredMarks(marks);
-                            
-                            if (dispatch) dispatch(tr);
-                            return true;
-                        }
-                    }
-
-                    if (event.key === "b" && (event.metaKey || event.ctrlKey)) {
-                        event.preventDefault();
-                        if (!boldType) return true;
-
-                        let { from, to } = selection;
-
-                        if (selection.empty) {
-                            const $pos = selection.$from;
-                            const text = $pos.parent.textContent;
-                            const offset = $pos.parentOffset;
-
-                            let start = offset;
-                            while (start > 0 && text.charAt(start - 1) !== " ") {
-                                start--;
-                            }
-                            let end = offset;
-                            while (end < text.length && text.charAt(end) !== " ") {
-                                end++;
-                            }
-
-                            if (start !== end) {
-                                from = $pos.start() + start;
-                                to = $pos.start() + end;
-                            }
-                        }
-
-                        if (from !== to) {
-                            let hasBold = false;
-                            state.doc.nodesBetween(from, to, (node) => {
-                                if (node.marks && boldType.isInSet(node.marks)) {
-                                    hasBold = true;
-                                }
-                            });
-
-                            if (hasBold) {
-                                tr.removeMark(from, to, boldType);
-                            } else {
-                                tr.addMark(from, to, boldType.create());
-                            }
-                        }
-
-                        // Prevent "bold input mode" by ensuring storedMarks doesn't contain bold
-                        const inheritedMarks = state.storedMarks || state.selection.$from.marks();
-                        const marksWithoutBold = inheritedMarks.filter(m => m.type !== boldType);
-                        tr.setStoredMarks(marksWithoutBold);
-
-                        if (dispatch) {
-                            dispatch(tr);
-                        }
-                        return true;
-                    }
                     // Shift+Enter → resume video, blur editor
                     if (event.key === "Enter" && event.shiftKey) {
                         event.preventDefault();
@@ -195,17 +141,113 @@ export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
                         timestamp: currentTimeRef.current,
                     });
                 }
-                // Debounced draft save (TipTap JSON) — only when draftKey is set
+                // Debounced draft save (TipTap HTML) — only when draftKey is set
+                // Saving pure HTML is much cleaner in localStorage
                 if (draftKeyRef.current) {
-                    debouncedSave(draftKeyRef.current, e.getJSON());
+                    debouncedSave(draftKeyRef.current, e.getHTML());
                 }
             },
         });
+        
         // Expose methods to parent
         useImperativeHandle(ref, () => ({
             getHtml: () => editor?.getHTML() ?? "",
             isEmpty: () => editor?.isEmpty ?? true,
+            getHighlightedWords: () => {
+                if (!editor) return [];
+                const words: {text: string}[] = [];
+                const doc = editor.state.doc;
+                const boldType = editor.schema.marks.bold;
+
+                doc.descendants((node) => {
+                    if (node.isText && node.marks) {
+                        const isBold = node.marks.some(m => m.type === boldType);
+                        if (isBold) {
+                            words.push({ text: node.text ?? "" });
+                        }
+                    }
+                });
+                
+                // Merge adjacent bold text nodes 
+                // (e.g. if formatting split the word into two bold nodes)
+                const merged: {text: string}[] = [];
+                let currentWord = "";
+                let inBold = false;
+                
+                doc.descendants((node) => {
+                    if (node.isText) {
+                        const isBold = node.marks?.some(m => m.type === boldType);
+                        if (isBold) {
+                            currentWord += node.text;
+                            inBold = true;
+                        } else {
+                            if (inBold && currentWord.trim()) {
+                                merged.push({ text: currentWord.trim() });
+                            }
+                            currentWord = "";
+                            inBold = false;
+                        }
+                    } else if (node.isBlock) {
+                        // Breaks split words clearly
+                        if (inBold && currentWord.trim()) {
+                            merged.push({ text: currentWord.trim() });
+                        }
+                        currentWord = "";
+                        inBold = false;
+                    }
+                });
+                
+                // Push concluding word
+                if (inBold && currentWord.trim()) {
+                    merged.push({ text: currentWord.trim() });
+                }
+
+                // Return deduped list by converting to Set and mapping back
+                const uniqueWords = Array.from(new Set(merged.map(m => m.text)));
+                return uniqueWords.map((w, index) => ({ id: `word-${index}`, text: w }));
+            },
+            getTranscriptSegments: () => {
+                if (!editor) return [];
+
+                const paragraphs: { text: string; start_time: number }[] = [];
+
+                editor.state.doc.descendants((node) => {
+                    if (node.type.name !== "paragraph") return true;
+
+                    const text = node.textContent.trim();
+                    if (!text) return true;
+
+                    const rawTimestamp = node.attrs.timestamp;
+                    const parsedTimestamp = Number(rawTimestamp);
+                    paragraphs.push({
+                        text,
+                        start_time: Number.isFinite(parsedTimestamp) ? parsedTimestamp : 0,
+                    });
+
+                    return true;
+                });
+
+                return paragraphs.map((paragraph, index) => {
+                    const nextStart = paragraphs[index + 1]?.start_time;
+                    const fallbackEnd = Math.max(paragraph.start_time + 4, currentTimeRef.current || 0);
+                    const end_time =
+                        typeof nextStart === "number" && nextStart > paragraph.start_time
+                            ? nextStart
+                            : fallbackEnd;
+
+                    return {
+                        start_time: paragraph.start_time,
+                        end_time,
+                        text: paragraph.text,
+                    };
+                });
+            },
+            updateHighlightedWord: () => {
+                // Feature deprecated as per user request to drop two-way sync
+                console.warn("Editing original text natively via modal is disabled.");
+            }
         }));
+
         return (
             <div
                 className={`rounded-xl border border-border bg-background shadow-inner overflow-hidden flex flex-col ${className ?? ""}`}
@@ -222,16 +264,15 @@ export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
                       const target = e.target as HTMLElement;
                       if (target.tagName === 'STRONG') {
                           const word = target.textContent?.trim() || "";
-                          const meaning = definitions[word];
-                          if (meaning) {
+                          const wordData = definitions[word];
+                          if (wordData) {
                               // Position popover near mouse
                               const offset = 10;
                               setPopup({
                                   visible: true,
                                   x: e.clientX + offset,
                                   y: e.clientY + offset,
-                                  word,
-                                  meaning
+                                  wordData
                               });
                           }
                       } else {
@@ -247,8 +288,7 @@ export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
                   visible={popup.visible}
                   x={popup.x}
                   y={popup.y}
-                  word={popup.word}
-                  meaning={popup.meaning}
+                  wordData={popup.wordData}
                   onClose={() => setPopup(prev => ({ ...prev, visible: false }))}
                 />
             </div>

@@ -6,9 +6,9 @@ import { useVideoPlayer } from "@/hooks/use-video-player";
 import { useTranscriptSync } from "@/hooks/use-transcript-sync";
 import { VideoControls } from "@/components/video/video-controls";
 import { TranscriptPanel } from "@/components/transcript/transcript-panel";
-import { EchoEditor, type EchoEditorHandle } from "@/components/scribe/echo-editor";
-import { ConfirmExplainModal } from "./confirm-explain-modal";
-import { fetchAIExplanations } from "@/lib/api/ai";
+import { EchoEditor } from "@/components/scribe/echo-editor";
+import { VocabularyReviewModal } from "./vocabulary-review-modal";
+import { getExplainDictationPrompt } from "@/lib/ai/prompts";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import {
@@ -28,7 +28,9 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Loader2,
+  Copy,
+  CheckCircle2,
+  TriangleAlert,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -39,10 +41,18 @@ export interface StudyRoomProps {
   videoMeta: YouTubeMeta;
   videoUrl: string;
   segments: TranscriptSegment[];
+  initialDefinitions?: Record<string, import("@/lib/ai/services").VocabularyExplanation>;
+  initialDictationHtml?: string | null;
   transcriptSource?: TranscriptSource;
   transcriptError?: string;
   defaultMode?: StudyMode;
 }
+
+type ReviewStep = "review_words" | "paste_json" | "review_ai";
+type FeedbackState = {
+  tone: "success" | "error" | "info";
+  text: string;
+} | null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function pushModeToUrl(mode: StudyMode) {
@@ -57,6 +67,8 @@ export function StudyRoom({
   videoMeta,
   videoUrl,
   segments,
+  initialDefinitions = {},
+  initialDictationHtml = null,
   transcriptSource,
   transcriptError,
   defaultMode = "scribe",
@@ -68,9 +80,12 @@ export function StudyRoom({
   const [showCC, setShowCC] = useState(false);
 
   // AI Definition state
-  const [isExplaining, setIsExplaining] = useState(false);
-  const [showExplainConfirm, setShowExplainConfirm] = useState(false);
-  const [definitions, setDefinitions] = useState<Record<string, string>>({});
+  // AI Definition state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [highlightedWords, setHighlightedWords] = useState<import("@/components/scribe/echo-editor").HighlightedWord[]>([]);
+  const [definitions, setDefinitions] = useState<Record<string, import("@/lib/ai/services").VocabularyExplanation>>(initialDefinitions);
+  const [reviewStep, setReviewStep] = useState<ReviewStep>("review_words");
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
 
   // ── Player ────────────────────────────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,7 +96,7 @@ export function StudyRoom({
   );
 
   // ── Editor ref ────────────────────────────────────────────────────────────
-  const editorRef = useRef<EchoEditorHandle>(null);
+  const editorRef = useRef<import("@/components/scribe/echo-editor").EchoEditorHandle>(null);
 
   // ── Stable player refs (for keyboard handler) ─────────────────────────────
   const playerPauseRef = useRef(player.pause);
@@ -137,28 +152,95 @@ export function StudyRoom({
     }
   };
 
-  const handleExplainConfirm = async () => {
-    setShowExplainConfirm(false);
-    setIsExplaining(true);
-    try {
-      const html = editorRef.current?.getHtml() ?? "";
-      const meta: ExportMetadata = {
-        title: videoMeta.title || `YouTube · ${videoId}`,
-        url: videoUrl,
-        channelName: videoMeta.channelName || undefined,
-        date: new Date().toLocaleDateString(),
-      };
-      
-      const md = convertToMarkdown(html, meta);
-      const definitionsMap = await fetchAIExplanations(md, locale);
-      setDefinitions(definitionsMap);
-      
-    } catch (e: any) {
-      console.error("[Explain AI] Error:", e);
-      alert(t("error") + " - " + e.message);
-    } finally {
-      setIsExplaining(false);
+  // ── Main UI Handlers ─────────────────────────────────────────────────────
+  const openVocabularyReview = () => {
+    if (!editorRef.current) return;
+    const words = editorRef.current.getHighlightedWords();
+    if (words.length === 0) {
+      setFeedback({ tone: "error", text: t("noVocabularySelected") });
+      return;
     }
+    setHighlightedWords(words);
+    setReviewStep("review_words");
+    setShowReviewModal(true);
+  };
+
+  const handleCopyPrompt = async (): Promise<{ ok: boolean; message: string }> => {
+    if (!editorRef.current) {
+      return { ok: false, message: t("copyPromptFailed") };
+    }
+
+    const html = editorRef.current.getHtml() ?? "";
+    const meta: ExportMetadata = {
+      title: videoMeta.title || `YouTube · ${videoId}`,
+      url: videoUrl,
+      channelName: videoMeta.channelName || undefined,
+      date: new Date().toLocaleDateString(),
+    };
+    const md = convertToMarkdown(html, meta);
+    const words = editorRef.current.getHighlightedWords().map(w => w.text);
+
+    if (words.length === 0) {
+      return { ok: false, message: t("noVocabularySelected") };
+    }
+
+    const promptTemplate = getExplainDictationPrompt(locale);
+    const promptText = promptTemplate
+      .replace("{{text}}", md)
+      .replace("{{words}}", JSON.stringify(words, null, 2));
+
+    try {
+      await navigator.clipboard.writeText(promptText);
+      setFeedback({ tone: "success", text: t("promptCopied") });
+      return { ok: true, message: t("promptCopied") };
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+      setFeedback({ tone: "error", text: t("copyPromptFailed") });
+      return { ok: false, message: t("copyPromptFailed") };
+    }
+  };
+
+  const handleCopyPromptAndOpenPaste = async () => {
+    if (!editorRef.current) return;
+    const words = editorRef.current.getHighlightedWords();
+    if (words.length === 0) {
+      setFeedback({ tone: "error", text: t("noVocabularySelected") });
+      return;
+    }
+
+    setHighlightedWords(words);
+    setReviewStep("paste_json");
+    setShowReviewModal(true);
+    await handleCopyPrompt();
+  };
+
+  const handleSaveVocabulary = async (
+    finalData: Record<string, import("@/lib/ai/services").VocabularyExplanation>, 
+    transforms: { id: string, newText: string }[],
+    options: { persistReviewedTranscript: boolean }
+  ) => {
+    // 1. Save to database via dedicated save endpoint
+    const { saveVocabularyToDB } = await import("@/lib/api/ai");
+    await saveVocabularyToDB(videoId, finalData, {
+      dictation: options.persistReviewedTranscript
+        ? {
+            contentHtml: editorRef.current?.getHtml() ?? "",
+            segments: editorRef.current?.getTranscriptSegments() ?? [],
+          }
+        : undefined,
+    });
+    
+    // 2. Synchronize Tiptap Editor if the user corrected typos in the modal
+    if (editorRef.current && transforms.length > 0) {
+      transforms.forEach(t => {
+        editorRef.current!.updateHighlightedWord(t.id, t.newText);
+      });
+    }
+
+    // 3. Update local state so hover dictionary pops up immediately
+    setDefinitions(prev => ({ ...prev, ...finalData }));
+    setFeedback({ tone: "success", text: t("saveSuccess") });
+    setShowReviewModal(false);
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -216,16 +298,26 @@ export function StudyRoom({
         {/* Export and AI Actions */}
         <div className="flex items-center gap-2 shrink-0">
           {mode === "scribe" && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowExplainConfirm(true)} 
-              disabled={isExplaining}
-              className="h-8 gap-1.5 text-xs text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30"
-            >
-              {isExplaining ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              {isExplaining ? t("explaining") : t("aiExplain")}
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={openVocabularyReview} 
+                className="h-8 gap-1.5 text-xs text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {t("aiExplain")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyPromptAndOpenPaste}
+                className="h-8 gap-1.5 text-xs"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                {t("copyPrompt")}
+              </Button>
+            </>
           )}
           <Button variant="outline" size="sm" onClick={handleExport} className="h-8 gap-1.5 text-xs">
             <Download className="h-3.5 w-3.5" />
@@ -233,6 +325,29 @@ export function StudyRoom({
           </Button>
         </div>
       </header>
+
+      {feedback && (
+        <div className="px-4 pt-3 shrink-0">
+          <div
+            className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${
+              feedback.tone === "success"
+                ? "border-emerald-300/70 bg-emerald-50 text-emerald-700"
+                : feedback.tone === "error"
+                  ? "border-red-300/70 bg-red-50 text-red-700"
+                  : "border-sky-300/70 bg-sky-50 text-sky-700"
+            }`}
+          >
+            {feedback.tone === "success" ? (
+              <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
+            ) : feedback.tone === "error" ? (
+              <TriangleAlert className="h-4 w-4 mt-0.5 shrink-0" />
+            ) : (
+              <Sparkles className="h-4 w-4 mt-0.5 shrink-0" />
+            )}
+            <span>{feedback.text}</span>
+          </div>
+        </div>
+      )}
 
       {/* ── Main ── */}
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0 overflow-hidden">
@@ -314,6 +429,7 @@ export function StudyRoom({
               onCommit={() => playerPlayRef.current()}
               currentTime={player.currentTime}
               draftKey={videoId}
+              initialContent={initialDictationHtml}
               definitions={definitions}
             />
           ) : (
@@ -329,15 +445,15 @@ export function StudyRoom({
 
       </main>
 
-      {/* AI Explanation Confirmation Modal */}
-      <ConfirmExplainModal
-        visible={showExplainConfirm}
-        title={t("confirmExplainTitle")}
-        description={t("confirmExplainDesc")}
-        cancelText={t("confirmExplainCancel")}
-        submitText={t("confirmExplainSubmit")}
-        onCancel={() => setShowExplainConfirm(false)}
-        onSubmit={handleExplainConfirm}
+      {/* Vocabulary Extractor 2-Step Modal */}
+      <VocabularyReviewModal
+        visible={showReviewModal}
+        initialWords={highlightedWords}
+        initialStep={reviewStep}
+        onCancel={() => setShowReviewModal(false)}
+        onSave={handleSaveVocabulary}
+        onCopyPrompt={handleCopyPrompt}
+        onFeedback={setFeedback}
       />
     </div>
   )

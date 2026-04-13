@@ -1,0 +1,637 @@
+{
+    "Amidst": {
+        "original_text": "Amidst",
+        "canonical_form": "amidst",
+        "explanation": "在……之中；处于（混乱、吵闹等）环境里。"
+    },
+    "obscure": {
+        "original_text": "obscure",
+        "canonical_form": "obscure",
+        "explanation": "不起眼的，鲜为人知的；通常指因不重要而未被注意的。"
+    },
+    "discrepancies": {
+        "original_text": "discrepancies",
+        "canonical_form": "discrepancy",
+        "explanation": "差异，不一致；指两个本应相同的记录或数据之间存在出入。"
+    },
+    "Convinced": {
+        "original_text": "Convinced",
+        "canonical_form": "convinced",
+        "explanation": "确信的，深信不疑的。"
+    },
+    "operating the belief": {
+        "original_text": "operating the belief",
+        "canonical_form": "operate on the belief",
+        "explanation": "抱着……的信念在行动；基于某种想法来行事。"
+    },
+    "goes back to": {
+        "original_text": "goes back to",
+        "canonical_form": "go back to",
+        "explanation": "追溯到，归因于。"
+    },
+    "at that stage": {
+        "original_text": "at that stage",
+        "canonical_form": "at that stage",
+        "explanation": "在那个阶段；在当时的情况下。"
+    },
+    "staggering": {
+        "original_text": "staggering",
+        "canonical_form": "staggering",
+        "explanation": "惊人的，令人难以置信的；通常指规模或程度巨大得令人震撼。"
+    },
+    "gargantuan": {
+        "original_text": "gargantuan",
+        "canonical_form": "gargantuan",
+        "explanation": "巨大的，庞大的。"
+    },
+    "proportions.": {
+        "original_text": "proportions.",
+        "canonical_form": "proportion",
+        "explanation": "规模，程度（通常指严重程度）。"
+    },
+    "make the case": {
+        "original_text": "make the case",
+        "canonical_form": "make the case",
+        "explanation": "阐述理由，论证（某观点）的正确性。"
+    },
+    "costly": {
+        "original_text": "costly",
+        "canonical_form": "costly",
+        "explanation": "代价高昂的；不仅指金钱，也指造成严重的损失或痛苦。"
+    },
+    "implicated": {
+        "original_text": "implicated",
+        "canonical_form": "implicate",
+        "explanation": "牵连其中；被视为……的原因或相关因素。"
+    },
+    "reserved": {
+        "original_text": "reserved",
+        "canonical_form": "reserve",
+        "explanation": "仅供……所有的；专属于（某类人）。"
+    },
+    "median": {
+        "original_text": "median",
+        "canonical_form": "median",
+        "explanation": "中位数；指在一组按大小顺序排列的数据中处于中间位置的数值。"
+    },
+    "now-classic": {
+        "original_text": "now-classic",
+        "canonical_form": "now-classic",
+        "explanation": "现已成为经典的；指过去某项研究在现在已被广泛认可和引用。"
+    },
+    "going on about": {
+        "original_text": "going on about",
+        "canonical_form": "go on about",
+        "explanation": "喋喋不休地谈论；不断地提及（某事）。"
+    },
+    "assessment": {
+        "original_text": "assessment",
+        "canonical_form": "assessment",
+        "explanation": "评估，评价；指对某事物的质量、价值或水平进行判断。"
+    },
+    "disparity": {
+        "original_text": "disparity",
+        "canonical_form": "disparity",
+        "explanation": "差异，不平等；通常指明显的、不合理的差距。"
+    },
+    "discrepancy": {
+        "original_text": "discrepancy",
+        "canonical_form": "discrepancy",
+        "explanation": "差异，不一致（此处指统计数据与实际情况的偏差）。"
+    },
+    "motor skills": {
+        "original_text": "motor skills",
+        "canonical_form": "motor skill",
+        "explanation": "运动技能；指控制肌肉运动的能力。"
+    },
+    "forecasters": {
+        "original_text": "forecasters",
+        "canonical_form": "forecaster",
+        "explanation": "预测者；专业从事经济、天气等未来趋势预测的人。"
+    },
+    "corporations": {
+        "original_text": "corporations",
+        "canonical_form": "corporation",
+        "explanation": "大公司，大型企业。"
+    },
+    "on a quarterly basis": {
+        "original_text": "on a quarterly basis",
+        "canonical_form": "on a quarterly basis",
+        "explanation": "每季度一次地。"
+    },
+    "inflation": {
+        "original_text": "inflation",
+        "canonical_form": "inflation",
+        "explanation": "通货膨胀；指物价水平普遍上升导致货币购买力下降。"
+    },
+    "calibration": {
+        "original_text": "calibration",
+        "canonical_form": "calibration",
+        "explanation": "校准；心理学中指“信心程度”与“实际准确度”之间的匹配程度。"
+    },
+    "went long": {
+        "original_text": "went long",
+        "canonical_form": "go long",
+        "explanation": "（金融术语）看涨，做多；指买入资产并期望其价格上涨。"
+    },
+    "asset price bubble": {
+        "original_text": "asset price bubble",
+        "canonical_form": "asset price bubble",
+        "explanation": "资产价格泡沫；指资产价格由于投机而远超其真实价值的现象。"
+    },
+    "bottom out": {
+        "original_text": "bottom out",
+        "canonical_form": "bottom out",
+        "explanation": "触底；指价格跌到最低点并开始趋于平稳或回升。"
+    },
+    "unrelenting": {
+        "original_text": "unrelenting",
+        "canonical_form": "unrelenting",
+        "explanation": "持续不断的，无情的；指坏情况一直没有好转迹象。"
+    },
+    "back in credit": {
+        "original_text": "back in credit",
+        "canonical_form": "back in credit",
+        "explanation": "恢复盈利状态；账户有了结余不再亏损。"
+    },
+    "futures market": {
+        "original_text": "futures market",
+        "canonical_form": "futures market",
+        "explanation": "期货市场。"
+    },
+    "default to": {
+        "original_text": "default to",
+        "canonical_form": "default to",
+        "explanation": "默认倾向于；在没有刻意选择时自动采取的行为或想法。"
+    },
+    "well informed": {
+        "original_text": "well informed",
+        "canonical_form": "well-informed",
+        "explanation": "见多识广的，消息灵通的。"
+    },
+    "egocentric": {
+        "original_text": "egocentric",
+        "canonical_form": "egocentric",
+        "explanation": "以自我为中心的。"
+    },
+    "excessive": {
+        "original_text": "excessive",
+        "canonical_form": "excessive",
+        "explanation": "过度的，极端的。"
+    },
+    "Reichelt had faith than the idea if nothing else.": {
+        "original_text": "Reichelt had faith than the idea if nothing else.",
+        "canonical_form": "have faith in the idea",
+        "explanation": "即便没有别的证据支持，赖希特也至少对这个想法抱有信心（注：文中than疑似in的转录错误）。"
+    },
+    "aviation": {
+        "original_text": "aviation",
+        "canonical_form": "aviation",
+        "explanation": "航空，飞行。"
+    },
+    "parachute": {
+        "original_text": "parachute",
+        "canonical_form": "parachute",
+        "explanation": "降落伞。"
+    },
+    "communication": {
+        "original_text": "communication",
+        "canonical_form": "communication",
+        "explanation": "传播，沟通；此处指信息在传播过程中产生的偏差。"
+    },
+    "fuzzy": {
+        "original_text": "fuzzy",
+        "canonical_form": "fuzzy",
+        "explanation": "模糊的，不确定的；指情况并非非黑即白。"
+    },
+    "meme": {
+        "original_text": "meme",
+        "canonical_form": "meme",
+        "explanation": "（网络）梗，模因；指在网络上广泛传播的文化信息或图片。"
+    },
+    "resonates": {
+        "original_text": "resonates",
+        "canonical_form": "resonate",
+        "explanation": "产生共鸣；使人感同身受。"
+    },
+    "statistical artifact": {
+        "original_text": "statistical artifact",
+        "canonical_form": "statistical artifact",
+        "explanation": "统计虚假现象；指由于统计方法或数据本身特性产生的表面现象，而非真实因果关系。"
+    },
+    "middle of the road": {
+        "original_text": "middle of the road",
+        "canonical_form": "middle-of-the-road",
+        "explanation": "中庸的，中间水平的。"
+    },
+    "space shuttle": {
+        "original_text": "space shuttle",
+        "canonical_form": "space shuttle",
+        "explanation": "航天飞机。"
+    },
+    "plummet": {
+        "original_text": "plummet",
+        "canonical_form": "plummet",
+        "explanation": "骤降，猛跌。"
+    },
+    "O-rings": {
+        "original_text": "O-rings",
+        "canonical_form": "O-ring",
+        "explanation": "O型密封圈；一种圆环形的橡胶密封件。"
+    },
+    "seal joints": {
+        "original_text": "seal joints",
+        "canonical_form": "seal joint",
+        "explanation": "密封连接处。"
+    },
+    "present their case": {
+        "original_text": "present their case",
+        "canonical_form": "present one's case",
+        "explanation": "陈述论据，说明理由。"
+    },
+    "scattered": {
+        "original_text": "scattered",
+        "canonical_form": "scatter",
+        "explanation": "零散的，分散的；指数据不集中，难以看出规律。"
+    },
+    "synthesized": {
+        "original_text": "synthesized",
+        "canonical_form": "synthesize",
+        "explanation": "综合，合成；将不同的信息整合在一起。"
+    },
+    "simultaneously": {
+        "original_text": "simultaneously",
+        "canonical_form": "simultaneously",
+        "explanation": "同时地。"
+    },
+    "erosion": {
+        "original_text": "erosion",
+        "canonical_form": "erosion",
+        "explanation": "侵蚀，冲蚀；此处指热气体对密封圈的损害。"
+    },
+    "differentials": {
+        "original_text": "differentials",
+        "canonical_form": "differential",
+        "explanation": "压差，差额。"
+    },
+    "overwhelmed": {
+        "original_text": "overwhelmed",
+        "canonical_form": "overwhelm",
+        "explanation": "（被过量信息）压倒，应接不暇。"
+    },
+    "seemingly": {
+        "original_text": "seemingly",
+        "canonical_form": "seemingly",
+        "explanation": "看似地，表面上。"
+    },
+    "contradictory": {
+        "original_text": "contradictory",
+        "canonical_form": "contradictory",
+        "explanation": "矛盾的。"
+    },
+    "overruled": {
+        "original_text": "overruled",
+        "canonical_form": "overrule",
+        "explanation": "否决；上级推翻下级的意见。"
+    },
+    "Calibrating": {
+        "original_text": "Calibrating",
+        "canonical_form": "calibrate",
+        "explanation": "校准，调整；指修正自己对确定性的判断。"
+    },
+    "finite": {
+        "original_text": "finite",
+        "canonical_form": "finite",
+        "explanation": "有限的。"
+    },
+    "fallible agents": {
+        "original_text": "fallible agents",
+        "canonical_form": "fallible agent",
+        "explanation": "会犯错的行为主体；指具有局限性、无法做到完美的个人。"
+    },
+    "chunks": {
+        "original_text": "chunks",
+        "canonical_form": "chunk",
+        "explanation": "组块；认知心理学中指短时记忆处理的信息单位。"
+    },
+    "novel": {
+        "original_text": "novel",
+        "canonical_form": "novel",
+        "explanation": "新颖的，新奇的。"
+    },
+    "ranges": {
+        "original_text": "ranges",
+        "canonical_form": "range",
+        "explanation": "估计区间；指给出一个数值范围而非单一数值。"
+    },
+    "factual questions": {
+        "original_text": "factual questions",
+        "canonical_form": "factual question",
+        "explanation": "事实性问题；有标准答案的知识性问题。"
+    },
+    "conducted": {
+        "original_text": "conducted",
+        "canonical_form": "conduct",
+        "explanation": "进行，实施（研究或调查）。"
+    },
+    "assessing": {
+        "original_text": "assessing",
+        "canonical_form": "assess",
+        "explanation": "评估，评定（自己的准确性）。"
+    },
+    "taxing": {
+        "original_text": "taxing",
+        "canonical_form": "taxing",
+        "explanation": "费劲的，耗神的；指任务对脑力或体力的消耗很大。"
+    },
+    "heuristics": {
+        "original_text": "heuristics",
+        "canonical_form": "heuristic",
+        "explanation": "启发式策略；指通过经验法则快速做出判断的心理快捷方式。"
+    },
+    "systemic": {
+        "original_text": "systemic",
+        "canonical_form": "systemic",
+        "explanation": "系统性的；指由于系统内部逻辑导致的普遍性错误。"
+    },
+    "cognitive": {
+        "original_text": "cognitive",
+        "canonical_form": "cognitive",
+        "explanation": "认知的。"
+    },
+    "substituting": {
+        "original_text": "substituting",
+        "canonical_form": "substitute",
+        "explanation": "替代；此处指用简单问题替代复杂问题的心理倾向。"
+    },
+    "correlate": {
+        "original_text": "correlate",
+        "canonical_form": "correlate",
+        "explanation": "相关联；指两个事物之间存在统计学上的关联性。"
+    },
+    "Tinder": {
+        "original_text": "Tinder",
+        "canonical_form": "Tinder",
+        "explanation": "交友软件；语境中借指约会机会。"
+    },
+    "balance them all out": {
+        "original_text": "balance them all out",
+        "canonical_form": "balance out",
+        "explanation": "综合平衡，权衡各个因素。"
+    },
+    "primed": {
+        "original_text": "primed",
+        "canonical_form": "prime",
+        "explanation": "（心理学）启动；指受先前信息影响而潜意识里倾向于某种反应。"
+    },
+    "wired": {
+        "original_text": "wired",
+        "canonical_form": "wire",
+        "explanation": "天生的，本能的；指生物进化形成的脑部回路特性。"
+    },
+    "natural selection": {
+        "original_text": "natural selection",
+        "canonical_form": "natural selection",
+        "explanation": "自然选择。"
+    },
+    "status": {
+        "original_text": "status",
+        "canonical_form": "status",
+        "explanation": "地位，社会身份。"
+    },
+    "Apprentice": {
+        "original_text": "Apprentice",
+        "canonical_form": "Apprentice",
+        "explanation": "学徒；此处指类似于商业真人秀《飞黄腾达》的任务形式。"
+    },
+    "assert": {
+        "original_text": "assert",
+        "canonical_form": "assert",
+        "explanation": "表现坚定，断言；积极表达自己的观点。"
+    },
+    "ventromedial prefrontal cortex": {
+        "original_text": "ventromedial prefrontal cortex",
+        "canonical_form": "ventromedial prefrontal cortex",
+        "explanation": "腹内侧前额叶皮层；大脑中负责处理奖赏和评价的区域。"
+    },
+    "processing rewards": {
+        "original_text": "processing rewards",
+        "canonical_form": "process reward",
+        "explanation": "处理奖赏感。"
+    },
+    "tuned": {
+        "original_text": "tuned",
+        "canonical_form": "tune",
+        "explanation": "调谐；指大脑生物性地预设了对某种信号的反应。"
+    },
+    "incentive": {
+        "original_text": "incentive",
+        "canonical_form": "incentive",
+        "explanation": "激励，动机。"
+    },
+    "contending": {
+        "original_text": "contending",
+        "canonical_form": "contend",
+        "explanation": "竞争，争夺。"
+    },
+    "talk a good line": {
+        "original_text": "talk a good line",
+        "canonical_form": "talk a good line",
+        "explanation": "口才好，能说会道（指在实际能力不足时也能通过言语给人留下好印象）。"
+    },
+    "racking up": {
+        "original_text": "racking up",
+        "canonical_form": "rack up",
+        "explanation": "积累（大额损失、债务或得分）。"
+    },
+    "sums": {
+        "original_text": "sums",
+        "canonical_form": "sum",
+        "explanation": "金额，款项。"
+    },
+    "features": {
+        "original_text": "features",
+        "canonical_form": "feature",
+        "explanation": "金融产品/特性；（注：根据巴林银行历史背景及前后文，此处应为“futures/期货”交易品种的误读或误写）。"
+    },
+    "in the red": {
+        "original_text": "in the red",
+        "canonical_form": "in the red",
+        "explanation": "亏损，负债；源于会计记录赤字用红笔书写。"
+    },
+    "inflating": {
+        "original_text": "inflating",
+        "canonical_form": "inflate",
+        "explanation": "虚报，夸大（利润）。"
+    },
+    "perceived": {
+        "original_text": "perceived",
+        "canonical_form": "perceive",
+        "explanation": "察觉到的，感知到的；指外界或他人眼中看到的假象。"
+    },
+    "flown": {
+        "original_text": "flown",
+        "canonical_form": "fly",
+        "explanation": "飞往（指被送往某地）。"
+    },
+    "downfall": {
+        "original_text": "downfall",
+        "canonical_form": "downfall",
+        "explanation": "垮台，覆灭。"
+    },
+    "amplified": {
+        "original_text": "amplified",
+        "canonical_form": "amplify",
+        "explanation": "放大，增强。"
+    },
+    "timely": {
+        "original_text": "timely",
+        "canonical_form": "timely",
+        "explanation": "及时的。"
+    },
+    "misplaced": {
+        "original_text": "misplaced",
+        "canonical_form": "misplaced",
+        "explanation": "错位的，不合适的；指对人的信任给错了地方。"
+    },
+    "pundits": {
+        "original_text": "pundits",
+        "canonical_form": "pundit",
+        "explanation": "专家，权威；常指经常在媒体上发表评论的政治或经济专家。"
+    },
+    "landslide": {
+        "original_text": "landslide",
+        "canonical_form": "landslide",
+        "explanation": "压倒性胜利。"
+    },
+    "by quite a bit": {
+        "original_text": "by quite a bit",
+        "canonical_form": "by quite a bit",
+        "explanation": "差距很大地，相当多地。"
+    },
+    "favorite": {
+        "original_text": "favorite",
+        "canonical_form": "favorite",
+        "explanation": "夺冠热门；指最被看好获胜的人。"
+    },
+    "president-breaking": {
+        "original_text": "president-breaking",
+        "canonical_form": "president-breaking",
+        "explanation": "打破先例的；此处指这次选举结果打破了该分析师以往准确预测的记录。"
+    },
+    "electorate": {
+        "original_text": "electorate",
+        "canonical_form": "electorate",
+        "explanation": "选民。"
+    },
+    "discern": {
+        "original_text": "discern",
+        "canonical_form": "discern",
+        "explanation": "识别，辨别；指在混乱中看清本质。"
+    },
+    "clouded": {
+        "original_text": "clouded",
+        "canonical_form": "cloud",
+        "explanation": "蒙蔽，使模糊；通常指情感或经验干扰了理智判断。"
+    },
+    "unwittingly": {
+        "original_text": "unwittingly",
+        "canonical_form": "unwittingly",
+        "explanation": "无意地，不知不觉地。"
+    },
+    "capital base": {
+        "original_text": "capital base",
+        "canonical_form": "capital base",
+        "explanation": "资本金；银行等机构用于支撑业务的基础自有资金。"
+    },
+    "positions": {
+        "original_text": "positions",
+        "canonical_form": "position",
+        "explanation": "头寸，仓位；指交易者手中持有的合约数量。"
+    },
+    "plunged": {
+        "original_text": "plunged",
+        "canonical_form": "plunge",
+        "explanation": "骤降，猛跌。"
+    },
+    "extradited": {
+        "original_text": "extradited",
+        "canonical_form": "extradite",
+        "explanation": "引渡；指将嫌疑人移交给有管辖权的国家受审。"
+    },
+    "vulnerable": {
+        "original_text": "vulnerable",
+        "canonical_form": "vulnerable",
+        "explanation": "易受影响的，脆弱的。"
+    },
+    "simplistic biases": {
+        "original_text": "simplistic biases",
+        "canonical_form": "simplistic bias",
+        "explanation": "简单化的偏见。"
+    },
+    "quizzical": {
+        "original_text": "quizzical",
+        "canonical_form": "quizzical",
+        "explanation": "疑惑的，古怪的。"
+    },
+    "intellectually": {
+        "original_text": "intellectually",
+        "canonical_form": "intellectually",
+        "explanation": "在理智上，在智力层面上。"
+    },
+    "as": {
+        "original_text": "as",
+        "canonical_form": "as",
+        "explanation": "（与其说……不如说……）；与 not so much 连用表示比较。"
+    },
+    "capitalize": {
+        "original_text": "capitalize",
+        "canonical_form": "capitalize",
+        "explanation": "利用；指利用某优势或资源（此处指利用集体的智慧）。"
+    },
+    "arguments": {
+        "original_text": "arguments",
+        "canonical_form": "argument",
+        "explanation": "论点，主张；批评者的理由。"
+    },
+    "lies": {
+        "original_text": "lies",
+        "canonical_form": "lie",
+        "explanation": "在于（指智慧的核心点）。"
+    },
+    "in": {
+        "original_text": "in",
+        "canonical_form": "in",
+        "explanation": "（存在）于……之中。"
+    },
+    "trivia": {
+        "original_text": "trivia",
+        "canonical_form": "trivia",
+        "explanation": "科普常识题；指关于琐碎知识的问题。"
+    },
+    "twist": {
+        "original_text": "twist",
+        "canonical_form": "twist",
+        "explanation": "转折，新意；指与传统规则不同的创新之处。"
+    },
+    "bid": {
+        "original_text": "bid",
+        "canonical_form": "bid",
+        "explanation": "出价，下注；此处指在游戏中为自己的信心投分。"
+    },
+    "etch": {
+        "original_text": "etch",
+        "canonical_form": "etch",
+        "explanation": "铭刻；指将名字永久留在某处。"
+    },
+    "credited": {
+        "original_text": "credited",
+        "canonical_form": "credited",
+        "explanation": "署名的；指题目旁会标注出提供者的名字。"
+    },
+    "reserve your copy": {
+        "original_text": "reserve your copy",
+        "canonical_form": "reserve your copy",
+        "explanation": "预订一份（商品或出版物）。"
+    }
+}

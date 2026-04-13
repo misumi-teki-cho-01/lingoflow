@@ -3,8 +3,11 @@ import { StudyRoom, type StudyMode } from "@/components/study-room/study-room";
 import { runTranscriptionPipeline } from "@/lib/pipeline/transcription-pipeline";
 import { fetchYouTubeMeta, type YouTubeMeta } from "@/lib/utils/youtube-meta";
 import { createClient } from "@/lib/supabase/server";
+import { getUserDictationByVideoId } from "@/lib/db/dictations";
+import { getSavedVocabularyForTranscript } from "@/lib/db/vocabulary";
 import type { TranscriptSegment } from "@/types/transcript";
 import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
+import type { VocabularyExplanation } from "@/lib/ai/services";
 
 const YT_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 
@@ -17,6 +20,7 @@ interface DBVideo {
 }
 
 interface DBTranscript {
+  id: string;
   segments: TranscriptSegment[];
   quality: TranscriptSource;
 }
@@ -24,6 +28,8 @@ interface DBTranscript {
 async function getVideoFromDB(videoExtId: string): Promise<{
   video: DBVideo | null;
   transcript: DBTranscript | null;
+  definitions: Record<string, VocabularyExplanation>;
+  dictationHtml: string | null;
 }> {
   try {
     const supabase = await createClient();
@@ -34,24 +40,37 @@ async function getVideoFromDB(videoExtId: string): Promise<{
       .eq("video_ext_id", videoExtId)
       .single();
 
-    if (!video) return { video: null, transcript: null };
+    if (!video) {
+      return { video: null, transcript: null, definitions: {}, dictationHtml: null };
+    }
 
     const { data: transcript } = await supabase
       .from("transcripts")
-      .select("segments, quality")
+      .select("id, segments, quality")
       .eq("video_id", video.id)
       .eq("language", "en")
       .eq("status", "completed")
       .single();
 
+    const definitions = transcript
+      ? await getSavedVocabularyForTranscript(transcript.id)
+      : {};
+    const dictation = await getUserDictationByVideoId(video.id, "en");
+
     return {
       video,
+      definitions,
+      dictationHtml: dictation?.content_html ?? null,
       transcript: transcript
-        ? { segments: transcript.segments as TranscriptSegment[], quality: transcript.quality as TranscriptSource }
+        ? {
+            id: transcript.id,
+            segments: transcript.segments as TranscriptSegment[],
+            quality: transcript.quality as TranscriptSource,
+          }
         : null,
     };
   } catch {
-    return { video: null, transcript: null };
+    return { video: null, transcript: null, definitions: {}, dictationHtml: null };
   }
 }
 
@@ -72,7 +91,7 @@ export default async function VideoPage({
   const videoUrl = `https://www.youtube.com/watch?v=${id}`;
 
   // ── Try DB first ───────────────────────────────────────────────────────────
-  const { video: dbVideo, transcript: dbTranscript } = await getVideoFromDB(id);
+  const { video: dbVideo, transcript: dbTranscript, definitions, dictationHtml } = await getVideoFromDB(id);
 
   let videoMeta: YouTubeMeta;
   let segments: TranscriptSegment[];
@@ -111,6 +130,8 @@ export default async function VideoPage({
       segments={segments}
       transcriptSource={transcriptSource}
       defaultMode={defaultMode}
+      initialDefinitions={definitions}
+      initialDictationHtml={dictationHtml}
     />
   );
 }

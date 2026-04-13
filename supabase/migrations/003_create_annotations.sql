@@ -2,7 +2,9 @@ CREATE TABLE user_annotations (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   transcript_id   UUID NOT NULL REFERENCES transcripts(id) ON DELETE CASCADE,
-  segment_index   INTEGER NOT NULL,
+  vocabulary_id   UUID, -- Will reference user_vocabulary(id) once created
+  selected_text   TEXT NOT NULL,
+  segment_index   INTEGER,
   start_char      INTEGER,
   end_char        INTEGER,
   annotation_type TEXT NOT NULL CHECK (annotation_type IN ('highlight', 'bookmark', 'note')),

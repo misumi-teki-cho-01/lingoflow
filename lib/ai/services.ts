@@ -1,6 +1,6 @@
 import type { TranscriptSegment } from "@/types/transcript";
 import { getGemini2_0FlashModel } from "./client";
-import { ENHANCEMENT_PROMPT, EXPLAIN_DICTATION_PROMPT } from "./prompts";
+import { ENHANCEMENT_PROMPT, getExplainDictationPrompt } from "./prompts";
 
 export interface EnhancementResult {
   segments: TranscriptSegment[];
@@ -69,26 +69,34 @@ export async function enhanceSubtitlesForLearners(
   }
 }
 
+export interface VocabularyExplanation {
+  original_text: string;
+  canonical_form: string;
+  explanation: string;
+}
+
 /**
  * Business Service: Explain highlighted vocabulary in dictation texts.
  */
 export async function explainTextVocabulary(
   text: string,
+  wordsToExplain: string[],
   locale: string = "zh"
-): Promise<Record<string, string>> {
-  if (!text) return {};
+): Promise<Record<string, VocabularyExplanation>> {
+  if (!text || wordsToExplain.length === 0) return {};
 
   try {
-    const prompt = EXPLAIN_DICTATION_PROMPT
-      .replace("{{locale}}", locale)
-      .replace("{{text}}", text);
+    const promptTemplate = getExplainDictationPrompt(locale);
+    const prompt = promptTemplate
+      .replace("{{text}}", text)
+      .replace("{{words}}", JSON.stringify(wordsToExplain, null, 2));
 
     const model = getGemini2_0FlashModel();
     const result = await model.generateContent(prompt);
-    
+
     const responseText = result.response.text();
     const cleanJsonStr = responseText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-    
+
     return JSON.parse(cleanJsonStr);
   } catch (error) {
     console.error("[AI Service: Explain] Failed:", error);
