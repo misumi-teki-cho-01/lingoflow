@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import type { VocabularyExplanation } from "@/lib/ai/services";
 
 export interface DictionaryPopoverProps {
@@ -10,10 +10,23 @@ export interface DictionaryPopoverProps {
 }
 
 export function DictionaryPopover({ visible, x, y, wordData, onClose }: DictionaryPopoverProps) {
+  // Close on Esc
+  useEffect(() => {
+    if (!visible) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [visible, onClose]);
+
   if (!visible || !wordData) return null;
 
   return (
-    <div 
+    <div
       className="fixed z-50 max-w-[280px] p-3 rounded-xl border border-indigo-500/30 bg-card text-card-foreground shadow-2xl backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200"
       style={{ left: x, top: y }}
       onClick={onClose}

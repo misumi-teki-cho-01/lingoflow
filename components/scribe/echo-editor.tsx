@@ -268,14 +268,18 @@ export const EchoEditor = forwardRef<EchoEditorHandle, EchoEditorProps>(
                           const word = target.textContent?.trim() || "";
                           const wordData = definitions[word];
                           if (wordData) {
-                              // Position popover near mouse
-                              const offset = 10;
-                              setPopup({
-                                  visible: true,
-                                  x: e.clientX + offset,
-                                  y: e.clientY + offset,
-                                  wordData
-                              });
+                              // Toggle: clicking the same word again closes the popover
+                              if (popup.visible && popup.wordData === wordData) {
+                                  setPopup(prev => ({ ...prev, visible: false }));
+                              } else {
+                                  const offset = 10;
+                                  setPopup({
+                                      visible: true,
+                                      x: e.clientX + offset,
+                                      y: e.clientY + offset,
+                                      wordData,
+                                  });
+                              }
                           }
                       } else {
                           setPopup(prev => ({ ...prev, visible: false }));
