@@ -30,3 +30,11 @@ export function truncate(text: string, maxLength: number): string {
 export function normalizeWord(raw: string): string {
   return raw.replace(/^[.,!?;:'"()[\]{}<>]+|[.,!?;:'"()[\]{}<>]+$/g, "").toLowerCase();
 }
+
+/**
+ * Strip leading/trailing punctuation from a token while preserving original casing.
+ * Used when building display text for CC selections.
+ */
+export function stripPunctuation(raw: string): string {
+  return raw.replace(/^[.,!?;:'"()[\]{}<>]+|[.,!?;:'"()[\]{}<>]+$/g, "");
+}

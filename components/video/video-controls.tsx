@@ -150,6 +150,13 @@ export function VideoControls({ player }: VideoControlsProps) {
           onChange={handleRangeChange}
           onMouseUp={handleRangeCommit}
           onTouchEnd={handleRangeCommit}
+          onKeyDown={(e) => {
+            // Override native step (0.1 s) so arrow keys use the user-defined seekStep
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+              e.preventDefault();
+              seekBy(e.key === "ArrowLeft" ? -seekStep : seekStep);
+            }
+          }}
           className="flex-1 h-1.5 cursor-pointer appearance-none rounded-full disabled:opacity-40"
           style={{
             background: `linear-gradient(to right, hsl(var(--primary)) ${progress}%, hsl(var(--muted)) ${progress}%)`,

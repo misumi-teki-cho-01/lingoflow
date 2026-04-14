@@ -1,24 +1,38 @@
 import { forwardRef, memo } from "react";
-import { formatTime, normalizeWord } from "@/lib/utils/format";
+import { formatTime, stripPunctuation } from "@/lib/utils/format";
 import { Play } from "lucide-react";
-import type { TranscriptSegment } from "@/types/transcript";
+import type { TranscriptSegment, CcSelection, DragState } from "@/types/transcript";
+import type { VocabularyExplanation } from "@/lib/ai/services";
 
 interface TranscriptSegmentProps {
   segment: TranscriptSegment;
   index: number;
   isActive: boolean;
-  onClick: (time: number) => void;
+  /** Seek the video to a timestamp. Always available (used by the ▶ button). */
+  onSeek: (time: number) => void;
+  /**
+   * Legacy prop: used when wordClickMode=false to make the entire row seekable
+   * (search/default mode). When wordClickMode=true, only the ▶ button seeks.
+   */
+  onClick?: (time: number) => void;
   searchQuery?: string;
   wordClickMode?: boolean;
-  selectedWords?: Set<string>;
-  onWordClick?: (word: string) => void;
+  /** Position keys "segIdx-wordIdx" — only the matching instance is highlighted. */
+  selectedPositionKeys?: Set<string>;
+  onWordSelect?: (sel: CcSelection) => void;
+  dragState?: DragState | null;
+  onDragStart?: (segIdx: number, wordIdx: number) => void;
+  onDragEnter?: (segIdx: number, wordIdx: number) => void;
+  onDragEnd?: () => void;
+  /** Map of lowercase word → definition, for showing popover on click in CC mode. */
+  definitionKeyMap?: Map<string, VocabularyExplanation>;
+  onDefinitionClick?: (cleanWord: string, x: number, y: number) => void;
 }
 
 /** Highlights matching text within a segment for the search query. */
 function HighlightedText({ text, query }: { text: string; query?: string }) {
   if (!query?.trim()) return <>{text}</>;
 
-  // Escape regex special chars to prevent errors on user input like "(" or "["
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const parts = text.split(new RegExp(`(${escaped})`, "gi"));
 
@@ -37,18 +51,63 @@ function HighlightedText({ text, query }: { text: string; query?: string }) {
   );
 }
 
-/** Splits text into tokens (words + whitespace) for word-click mode. */
+/** Splits text into word tokens for position-based selection and drag-to-select. */
 function WordClickableText({
   text,
-  selectedWords,
-  onWordClick,
+  segmentIndex,
+  selectedPositionKeys,
+  dragState,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+  definitionKeyMap,
+  onDefinitionClick,
 }: {
   text: string;
-  selectedWords?: Set<string>;
-  onWordClick?: (word: string) => void;
+  segmentIndex: number;
+  selectedPositionKeys?: Set<string>;
+  dragState?: DragState | null;
+  onDragStart?: (segIdx: number, wordIdx: number) => void;
+  onDragEnter?: (segIdx: number, wordIdx: number) => void;
+  onDragEnd?: () => void;
+  definitionKeyMap?: Map<string, VocabularyExplanation>;
+  onDefinitionClick?: (cleanWord: string, x: number, y: number) => void;
 }) {
-  // Split on whitespace boundaries, keeping the separators
   const tokens = text.split(/(\s+)/);
+
+  // ── Phrase-aware definition lookup ────────────────────────────────────────
+  // Build a map from word-index → VocabularyExplanation, supporting both
+  // single-word keys ("running") and multi-word phrase keys ("look forward to").
+  const defAtWordIdx = new Map<number, VocabularyExplanation>();
+  if (definitionKeyMap && definitionKeyMap.size > 0) {
+    const nonWsTokens = tokens.filter((t) => !/^\s+$/.test(t));
+
+    // Pass 1: phrase matches (keys that contain spaces).
+    // Done first so a phrase like "run out" wins over single "run".
+    definitionKeyMap.forEach((def, phrase) => {
+      if (!phrase.includes(" ")) return;
+      const phraseWords = phrase.split(/\s+/);
+      for (let i = 0; i <= nonWsTokens.length - phraseWords.length; i++) {
+        if (defAtWordIdx.has(i)) continue; // already claimed by a longer phrase
+        const matches = phraseWords.every(
+          (pw, j) => stripPunctuation(nonWsTokens[i + j]).toLowerCase() === pw
+        );
+        if (matches) defAtWordIdx.set(i, def);
+      }
+    });
+
+    // Pass 2: single-word matches (don't override phrase matches).
+    nonWsTokens.forEach((token, i) => {
+      if (defAtWordIdx.has(i)) return;
+      const clean = stripPunctuation(token).toLowerCase();
+      if (!clean) return;
+      const def = definitionKeyMap.get(clean);
+      if (def) defAtWordIdx.set(i, def);
+    });
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
+  let wordIdx = 0;
 
   return (
     <>
@@ -56,22 +115,61 @@ function WordClickableText({
         if (/^\s+$/.test(token)) {
           return <span key={i}>{token}</span>;
         }
-        const normalized = normalizeWord(token);
-        if (!normalized) {
-          return <span key={i}>{token}</span>;
-        }
-        const isSelected = selectedWords?.has(normalized) ?? false;
+
+        const currentWordIdx = wordIdx++;
+        const posKey = `${segmentIndex}-${currentWordIdx}`;
+        const isSelected = selectedPositionKeys?.has(posKey) ?? false;
+
+        // Drag-preview highlight: same segment, within drag range
+        const isInDrag =
+          dragState != null &&
+          dragState.segmentIndex === segmentIndex &&
+          currentWordIdx >= Math.min(dragState.startIdx, dragState.currentIdx) &&
+          currentWordIdx <= Math.max(dragState.startIdx, dragState.currentIdx);
+
+        const highlighted = isSelected || isInDrag;
+
+        const defForWord = defAtWordIdx.get(currentWordIdx);
+        const hasDef = defForWord != null;
+        // Phrase definitions get a dashed underline; single-word get solid.
+        const isPhraseDef = hasDef && defForWord.original_text.includes(" ");
+
         return (
           <span
             key={i}
+            onMouseDown={(e) => {
+              e.preventDefault(); // prevent native text selection
+              // Words with saved definitions are tap-to-view only — don't start a drag.
+              if (!hasDef) onDragStart?.(segmentIndex, currentWordIdx);
+            }}
+            onMouseEnter={() => {
+              onDragEnter?.(segmentIndex, currentWordIdx);
+            }}
+            onMouseUp={(e) => {
+              e.stopPropagation(); // prevent double-fire from container's onMouseUp
+              onDragEnd?.();
+            }}
             onClick={(e) => {
-              e.stopPropagation();
-              onWordClick?.(normalized);
+              if (hasDef && defForWord) {
+                e.stopPropagation();
+                // Pass the full phrase key so the panel can look it up in definitionKeyMap.
+                onDefinitionClick?.(
+                  defForWord.original_text.toLowerCase(),
+                  e.clientX + 10,
+                  e.clientY + 10
+                );
+              }
             }}
             className={`cursor-pointer rounded px-0.5 transition-colors select-none ${
-              isSelected
+              highlighted
                 ? "bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100"
-                : "hover:bg-muted"
+                : hasDef
+                  ? "text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                  : "hover:bg-muted"
+            } ${
+              hasDef
+                ? `border-b-2 border-indigo-400 dark:border-indigo-500 ${isPhraseDef ? "border-dashed" : ""}`
+                : ""
             }`}
           >
             {token}
@@ -85,23 +183,48 @@ function WordClickableText({
 export const TranscriptSegmentRow = memo(
   forwardRef<HTMLDivElement, TranscriptSegmentProps>(
     function TranscriptSegmentRow(
-      { segment, isActive, onClick, searchQuery, wordClickMode, selectedWords, onWordClick },
+      {
+        segment,
+        index,
+        isActive,
+        onSeek,
+        onClick,
+        searchQuery,
+        wordClickMode,
+        selectedPositionKeys,
+        dragState,
+        onDragStart,
+        onDragEnter,
+        onDragEnd,
+        definitionKeyMap,
+        onDefinitionClick,
+      },
       ref
     ) {
       return (
         <div
           ref={ref}
-          role="button"
-          tabIndex={0}
-          onClick={() => onClick(segment.start_time)}
-          onKeyDown={(e) => e.key === "Enter" && onClick(segment.start_time)}
+          // In word-click mode the row is NOT interactive — only the ▶ button seeks.
+          // In search/default mode the whole row is still clickable.
+          role={wordClickMode ? undefined : "button"}
+          tabIndex={wordClickMode ? undefined : 0}
+          onClick={
+            wordClickMode
+              ? undefined
+              : () => (onClick ?? onSeek)(segment.start_time)
+          }
+          onKeyDown={
+            wordClickMode
+              ? undefined
+              : (e) => e.key === "Enter" && (onClick ?? onSeek)(segment.start_time)
+          }
           className={`
-            group flex cursor-pointer gap-4 rounded-lg px-4 py-3 transition-all duration-200 outline-none
-            focus-visible:ring-2 focus-visible:ring-primary/50
+            group flex gap-4 rounded-lg px-4 py-3 transition-all duration-200 outline-none
+            ${wordClickMode ? "" : "cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/50"}
             ${isActive ? "bg-primary/10 ring-1 ring-inset ring-primary/20" : "hover:bg-muted/50"}
           `}
         >
-          {/* Timestamp & play icon */}
+          {/* Timestamp & play button */}
           <div className="mt-0.5 flex flex-col items-center gap-1 w-10 shrink-0">
             <span
               className={`
@@ -111,8 +234,15 @@ export const TranscriptSegmentRow = memo(
             >
               {formatTime(segment.start_time)}
             </span>
-            <div
-              className={`transition-all duration-200 ${
+            {/* ▶ is always a real button — the only seek trigger in word-click mode */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSeek(segment.start_time);
+              }}
+              aria-label={`Seek to ${formatTime(segment.start_time)}`}
+              className={`transition-all duration-200 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary ${
                 isActive
                   ? "opacity-100 scale-100"
                   : "opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100"
@@ -121,7 +251,7 @@ export const TranscriptSegmentRow = memo(
               <Play
                 className={`h-3 w-3 ${isActive ? "fill-primary text-primary" : "text-muted-foreground"}`}
               />
-            </div>
+            </button>
           </div>
 
           {/* Text */}
@@ -134,8 +264,14 @@ export const TranscriptSegmentRow = memo(
             {wordClickMode ? (
               <WordClickableText
                 text={segment.text}
-                selectedWords={selectedWords}
-                onWordClick={onWordClick}
+                segmentIndex={index}
+                selectedPositionKeys={selectedPositionKeys}
+                dragState={dragState}
+                onDragStart={onDragStart}
+                onDragEnter={onDragEnter}
+                onDragEnd={onDragEnd}
+                definitionKeyMap={definitionKeyMap}
+                onDefinitionClick={onDefinitionClick}
               />
             ) : (
               <HighlightedText text={segment.text} query={searchQuery} />

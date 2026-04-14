@@ -108,6 +108,7 @@
     "waitingForJson": "等待粘贴 JSON",
     "pasteJsonHintInline": "复制 Prompt 后，把 AI 返回的 JSON 粘贴进来。",
     "goToPasteJson": "去粘贴 JSON",
+    "fillManually": "手动填写",
     "backToSelection": "返回选词",
     "applyJson": "应用 JSON",
     "backToPasteJson": "返回 JSON",

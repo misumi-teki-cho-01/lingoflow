@@ -108,6 +108,7 @@
     "waitingForJson": "JSON の貼り付け待ち",
     "pasteJsonHintInline": "Prompt をコピーして、返ってきた JSON をここに貼り付けてください。",
     "goToPasteJson": "JSON 貼り付けへ",
+    "fillManually": "手動で入力",
     "backToSelection": "選択画面に戻る",
     "applyJson": "JSON を適用",
     "backToPasteJson": "JSON に戻る",

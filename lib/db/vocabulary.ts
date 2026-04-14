@@ -43,7 +43,8 @@ export async function getSavedVocabularyForTranscript(
  */
 export async function saveVocabularyAndAnnotations(
   videoExtId: string,
-  definitions: Record<string, VocabularyExplanation>
+  definitions: Record<string, VocabularyExplanation>,
+  sourceMode: "cc" | "scribe" = "scribe"
 ) {
   const definitionEntries = Object.values(definitions);
   if (definitionEntries.length === 0) return;
@@ -111,7 +112,8 @@ export async function saveVocabularyAndAnnotations(
       transcript_id: transcriptId,
       vocabulary_id: vocabIdByCanonicalForm.get(def.canonical_form.trim()) ?? null,
       selected_text: def.original_text,
-      annotation_type: "note", // default type
+      annotation_type: "note",
+      source_mode: sourceMode,
     }));
 
     const { error: annoErr } = await db

@@ -108,6 +108,7 @@
     "waitingForJson": "Waiting for pasted JSON",
     "pasteJsonHintInline": "Copy the prompt first, then paste the returned JSON here.",
     "goToPasteJson": "Go to JSON Paste",
+    "fillManually": "Fill in Manually",
     "backToSelection": "Back to Selection",
     "applyJson": "Apply JSON",
     "backToPasteJson": "Back to JSON",

@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollText, Search, MousePointerClick, X, Check, Sparkles } from "lucide-react";
 import { TranscriptSegmentRow } from "./transcript-segment";
-import type { TranscriptSegment } from "@/types/transcript";
+import { DictionaryPopover } from "@/components/scribe/dictionary-popover";
+import type { TranscriptSegment, DragState } from "@/types/transcript";
 import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
+import type { VocabularyExplanation } from "@/lib/ai/services";
 
 interface TranscriptPanelProps {
   segments: TranscriptSegment[];
@@ -19,8 +21,16 @@ interface TranscriptPanelProps {
   isLoading?: boolean;
   errorMessage?: string;
   wordClickMode?: boolean;
-  selectedWords?: Set<string>;
-  onWordClick?: (word: string) => void;
+  /** Position keys "segIdx-wordIdx" for highlighting selected instances only. */
+  selectedPositionKeys?: Set<string>;
+  /** Number of CcSelection entries (may differ from selectedPositionKeys.size for phrases). */
+  selectionCount?: number;
+  /** Saved vocabulary definitions — used to show definition popover on click. */
+  definitions?: Record<string, VocabularyExplanation>;
+  dragState?: DragState | null;
+  onDragStart?: (segIdx: number, wordIdx: number) => void;
+  onDragEnter?: (segIdx: number, wordIdx: number) => void;
+  onDragEnd?: () => void;
   onExplainWords?: () => void;
   onClearWords?: () => void;
 }
@@ -33,8 +43,13 @@ export function TranscriptPanel({
   isLoading = false,
   errorMessage,
   wordClickMode = false,
-  selectedWords,
-  onWordClick,
+  selectedPositionKeys,
+  selectionCount = 0,
+  definitions = {},
+  dragState,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
   onExplainWords,
   onClearWords,
 }: TranscriptPanelProps) {
@@ -42,6 +57,28 @@ export function TranscriptPanel({
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+
+  // Definition popover state
+  const [popup, setPopup] = useState<{
+    visible: boolean; x: number; y: number; wordData?: VocabularyExplanation;
+  }>({ visible: false, x: 0, y: 0 });
+
+  // Lowercase key map for fast definition lookup
+  const definitionKeyMap = useMemo(() => {
+    const map = new Map<string, VocabularyExplanation>();
+    Object.entries(definitions).forEach(([k, v]) => map.set(k.toLowerCase(), v));
+    return map;
+  }, [definitions]);
+
+  const handleDefinitionClick = (cleanWord: string, x: number, y: number) => {
+    const wordData = definitionKeyMap.get(cleanWord.toLowerCase());
+    if (!wordData) return;
+    setPopup((prev) =>
+      prev.visible && prev.wordData === wordData
+        ? { ...prev, visible: false }
+        : { visible: true, x, y, wordData }
+    );
+  };
 
   const activeRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -66,8 +103,6 @@ export function TranscriptPanel({
     if (activeSegmentIndex < 0 || !isAutoScrollEnabled) return;
     activeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [activeSegmentIndex, isAutoScrollEnabled]);
-
-  const selectedCount = selectedWords?.size ?? 0;
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoading) {
@@ -122,7 +157,7 @@ export function TranscriptPanel({
           </div>
 
           <div className="flex items-center gap-1">
-            {wordClickMode && selectedCount > 0 && (
+            {wordClickMode && selectionCount > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -177,10 +212,15 @@ export function TranscriptPanel({
         )}
       </div>
 
-      {/* Scrollable segment list */}
+      {/* Scrollable segment list — cancel drag if pointer leaves the list */}
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto px-2 py-2 scroll-smooth custom-scrollbar"
+        onMouseUp={() => onDragEnd?.()}
+        onMouseLeave={() => {
+          // Cancel (don't commit) if mouse leaves the panel while dragging
+          if (dragState) onDragEnd?.();
+        }}
       >
         <div className="flex flex-col gap-0.5">
           {filteredSegments.length > 0 ? (
@@ -193,11 +233,17 @@ export function TranscriptPanel({
                   segment={segment}
                   index={originalIndex}
                   isActive={originalIndex === activeSegmentIndex}
-                  onClick={onSegmentClick}
+                  onSeek={onSegmentClick}
+                  onClick={wordClickMode ? undefined : onSegmentClick}
                   searchQuery={searchQuery}
                   wordClickMode={wordClickMode}
-                  selectedWords={selectedWords}
-                  onWordClick={onWordClick}
+                  selectedPositionKeys={selectedPositionKeys}
+                  definitionKeyMap={definitionKeyMap}
+                  onDefinitionClick={handleDefinitionClick}
+                  dragState={dragState}
+                  onDragStart={onDragStart}
+                  onDragEnter={onDragEnter}
+                  onDragEnd={onDragEnd}
                 />
               );
             })
@@ -210,7 +256,7 @@ export function TranscriptPanel({
         </div>
       </div>
 
-      {/* "Follow progress" floating button — visible when auto-scroll is off (only in non-word-click mode) */}
+      {/* "Follow progress" floating button */}
       {!wordClickMode && !isAutoScrollEnabled && activeSegmentIndex >= 0 && (
         <div className="absolute bottom-4 right-4 animate-in fade-in slide-in-from-bottom-2">
           <Button
@@ -227,8 +273,8 @@ export function TranscriptPanel({
         </div>
       )}
 
-      {/* "Explain N words" floating button — visible when words are selected */}
-      {wordClickMode && selectedCount > 0 && (
+      {/* "Explain N words" floating button */}
+      {wordClickMode && selectionCount > 0 && (
         <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4 animate-in fade-in slide-in-from-bottom-2 z-10">
           <Button
             size="sm"
@@ -236,10 +282,19 @@ export function TranscriptPanel({
             className="h-9 shadow-lg gap-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            {t("explainWords", { count: selectedCount })}
+            {t("explainWords", { count: selectionCount })}
           </Button>
         </div>
       )}
+
+      {/* Definition popover — rendered outside the scroll container so it's never clipped */}
+      <DictionaryPopover
+        visible={popup.visible}
+        x={popup.x}
+        y={popup.y}
+        wordData={popup.wordData}
+        onClose={() => setPopup((prev) => ({ ...prev, visible: false }))}
+      />
     </div>
   );
 }

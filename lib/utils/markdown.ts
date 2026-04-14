@@ -1,5 +1,5 @@
 import TurndownService from "turndown";
-import type { TranscriptSegment } from "@/types/transcript";
+import type { TranscriptSegment, CcSelection } from "@/types/transcript";
 import { formatTime } from "./format";
 
 // ── Turndown service ───────────────────────────────────────────────────────
@@ -59,6 +59,44 @@ export function convertTranscriptToMarkdown(
   const body = segments
     .map((s) => `[${formatTime(s.start_time)}] ${s.text}`)
     .join("\n");
+  return buildHeader(metadata) + body;
+}
+
+// ── CC Transcript export with selected-word highlights ───────────────────
+/**
+ * Same as convertTranscriptToMarkdown, but wraps selected words/phrases in **bold**
+ * so the AI can locate them precisely in the context.
+ */
+export function convertTranscriptToMarkdownWithHighlights(
+  segments: TranscriptSegment[],
+  metadata: ExportMetadata,
+  selections: CcSelection[]
+): string {
+  const body = segments
+    .map((seg, segIdx) => {
+      const selInSeg = selections.filter((s) => s.segmentIndex === segIdx);
+      if (selInSeg.length === 0) {
+        return `[${formatTime(seg.start_time)}] ${seg.text}`;
+      }
+
+      // Split into tokens (words + whitespace), track non-whitespace index
+      const tokens = seg.text.split(/(\s+)/);
+      let wordIdx = 0;
+      const result = tokens.map((token) => {
+        if (/^\s+$/.test(token)) return token;
+        const currentWordIdx = wordIdx++;
+        const isBold = selInSeg.some(
+          (s) =>
+            currentWordIdx >= s.startWordIndex &&
+            currentWordIdx <= s.endWordIndex
+        );
+        return isBold ? `**${token}**` : token;
+      });
+
+      return `[${formatTime(seg.start_time)}] ${result.join("")}`;
+    })
+    .join("\n");
+
   return buildHeader(metadata) + body;
 }
 

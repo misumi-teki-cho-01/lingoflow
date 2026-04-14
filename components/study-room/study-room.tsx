@@ -12,14 +12,16 @@ import { VocabularyReviewModal } from "./vocabulary-review-modal";
 import { SubtitleEnhanceModal } from "./subtitle-enhance-modal";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { stripPunctuation } from "@/lib/utils/format";
 import {
   convertToMarkdown,
   convertTranscriptToMarkdown,
+  convertTranscriptToMarkdownWithHighlights,
   downloadMarkdown,
   type ExportMetadata,
 } from "@/lib/utils/markdown";
 import { saveEnhancedTranscript } from "@/lib/api/transcripts";
-import type { TranscriptSegment } from "@/types/transcript";
+import type { TranscriptSegment, CcSelection, DragState } from "@/types/transcript";
 import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
 import type { YouTubeMeta } from "@/lib/utils/youtube-meta";
 import type { VocabularyExplanation } from "@/lib/ai/services";
@@ -94,9 +96,40 @@ export function StudyRoom({
   // Live segments (can be updated after AI enhancement)
   const [liveSegments, setLiveSegments] = useState<TranscriptSegment[]>(initialSegments);
 
-  // CC mode word selection
-  const [ccSelectedWords, setCcSelectedWords] = useState<string[]>([]);
-  const ccSelectedWordSet = useMemo(() => new Set(ccSelectedWords), [ccSelectedWords]);
+  // CC mode — position-based selections + drag state
+  const [ccSelections, setCcSelections] = useState<CcSelection[]>([]);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+
+  // Derived: set of "segIdx-wordIdx" keys for fast per-instance highlight lookup
+  const selectedPositionKeys = useMemo(() => {
+    const keys = new Set<string>();
+    ccSelections.forEach((sel) => {
+      for (let i = sel.startWordIndex; i <= sel.endWordIndex; i++) {
+        keys.add(`${sel.segmentIndex}-${i}`);
+      }
+    });
+    return keys;
+  }, [ccSelections]);
+
+  // ── CC selection persistence ──────────────────────────────────────────────
+  const CC_STORAGE_KEY = `cc-selections-${videoId}`;
+
+  // Load saved selections on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CC_STORAGE_KEY);
+      if (saved) setCcSelections(JSON.parse(saved));
+    } catch { /* ignore corrupt data */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [CC_STORAGE_KEY]);
+
+  // Save on every change (debounced 500 ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      localStorage.setItem(CC_STORAGE_KEY, JSON.stringify(ccSelections));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [ccSelections, CC_STORAGE_KEY]);
 
   // Enhancement modal
   const [showEnhanceModal, setShowEnhanceModal] = useState(false);
@@ -141,8 +174,11 @@ export function StudyRoom({
   const handleModeChange = useCallback((next: StudyMode) => {
     setMode(next);
     pushModeToUrl(next);
-    // Clear CC word selection when switching away
-    if (next !== "cc") setCcSelectedWords([]);
+    // Clear CC selections when switching away
+    if (next !== "cc") {
+      setCcSelections([]);
+      setDragState(null);
+    }
   }, []);
 
   // ── Global keyboard shortcuts (Scribe mode only) ───────────────────────────
@@ -187,19 +223,66 @@ export function StudyRoom({
   }, [exportMeta]);
 
   const getCCContextText = useCallback(async (): Promise<string> => {
-    return convertTranscriptToMarkdown(liveSegments, exportMeta);
-  }, [liveSegments, exportMeta]);
+    return convertTranscriptToMarkdownWithHighlights(liveSegments, exportMeta, ccSelections);
+  }, [liveSegments, exportMeta, ccSelections]);
 
-  // ── CC word selection ─────────────────────────────────────────────────────
-  const handleCCWordClick = useCallback((word: string) => {
-    setCcSelectedWords((prev) =>
-      prev.includes(word) ? prev.filter((w) => w !== word) : [...prev, word]
+  // ── CC drag selection ─────────────────────────────────────────────────────
+  const handleDragStart = useCallback((segIdx: number, wordIdx: number) => {
+    setDragState({ segmentIndex: segIdx, startIdx: wordIdx, currentIdx: wordIdx });
+  }, []);
+
+  const handleDragEnter = useCallback((segIdx: number, wordIdx: number) => {
+    setDragState((prev) =>
+      prev?.segmentIndex === segIdx ? { ...prev, currentIdx: wordIdx } : prev
     );
   }, []);
 
+  const handleDragEnd = useCallback(() => {
+    // Read dragState directly from closure (it's in deps) — no nested setState
+    if (!dragState) return;
+
+    const { segmentIndex, startIdx, currentIdx } = dragState;
+    const minIdx = Math.min(startIdx, currentIdx);
+    const maxIdx = Math.max(startIdx, currentIdx);
+
+    const seg = liveSegments[segmentIndex];
+    const nonWhitespaceTokens = seg.text.split(/(\s+)/).filter((t) => !/^\s+$/.test(t));
+    // Strip leading/trailing punctuation from each token so "world." → "world"
+    const phrase = nonWhitespaceTokens
+      .slice(minIdx, maxIdx + 1)
+      .map(stripPunctuation)
+      .filter(Boolean)
+      .join(" ");
+
+    const id =
+      minIdx === maxIdx
+        ? `${segmentIndex}-${minIdx}`
+        : `${segmentIndex}-${minIdx}-${maxIdx}`;
+
+    // Clear drag state first so double-fire is a no-op
+    setDragState(null);
+
+    setCcSelections((prevSels) => {
+      const overlaps = prevSels.filter(
+        (s) =>
+          s.segmentIndex === segmentIndex &&
+          s.startWordIndex <= maxIdx &&
+          s.endWordIndex >= minIdx
+      );
+      if (overlaps.length > 0) {
+        return prevSels.filter((s) => !overlaps.includes(s));
+      }
+      return [
+        ...prevSels,
+        { id, segmentIndex, startWordIndex: minIdx, endWordIndex: maxIdx, text: phrase },
+      ];
+    });
+  }, [dragState, liveSegments]);
+
   const handleCCWordsClear = useCallback(() => {
-    setCcSelectedWords([]);
-  }, []);
+    setCcSelections([]);
+    localStorage.removeItem(`cc-selections-${videoId}`);
+  }, [videoId]);
 
   // ── Vocabulary review — Scribe ────────────────────────────────────────────
   const openScribeVocabularyReview = () => {
@@ -214,10 +297,10 @@ export function StudyRoom({
 
   // ── Vocabulary review — CC ─────────────────────────────────────────────────
   const openCCVocabularyReview = useCallback(() => {
-    if (ccSelectedWords.length === 0) return;
-    const words = ccSelectedWords.map((w, i) => ({ id: `cc-word-${i}-${w}`, text: w }));
+    if (ccSelections.length === 0) return;
+    const words = ccSelections.map((sel) => ({ id: sel.id, text: sel.text }));
     openReview(words);
-  }, [ccSelectedWords, openReview]);
+  }, [ccSelections, openReview]);
 
   // ── Save vocabulary — Scribe ──────────────────────────────────────────────
   const handleSaveScribeVocabulary = async (
@@ -227,6 +310,7 @@ export function StudyRoom({
   ) => {
     const { saveVocabularyToDB } = await import("@/lib/api/ai");
     await saveVocabularyToDB(videoId, finalData, {
+      sourceMode: "scribe",
       dictation: options.persistReviewedTranscript
         ? {
             contentHtml: editorRef.current?.getHtml() ?? "",
@@ -253,9 +337,9 @@ export function StudyRoom({
     _options: { persistReviewedTranscript: boolean }
   ) => {
     const { saveVocabularyToDB } = await import("@/lib/api/ai");
-    await saveVocabularyToDB(videoId, finalData);
+    await saveVocabularyToDB(videoId, finalData, { sourceMode: "cc" });
     setDefinitions((prev) => ({ ...prev, ...finalData }));
-    setCcSelectedWords([]);
+    // Keep selections visible — words now show their definitions on click
     showFeedback({ tone: "success", text: t("saveSuccess") });
     closeReview();
   };
@@ -336,7 +420,7 @@ export function StudyRoom({
 
           {mode === "cc" && (
             <>
-              {ccSelectedWords.length > 0 && (
+              {ccSelections.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -344,7 +428,7 @@ export function StudyRoom({
                   className="h-8 gap-1.5 text-xs text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
-                  {t("aiExplain")} ({ccSelectedWords.length})
+                  {t("aiExplain")} ({ccSelections.length})
                 </Button>
               )}
               <Button
@@ -479,8 +563,13 @@ export function StudyRoom({
               source={transcriptSource}
               errorMessage={transcriptError}
               wordClickMode
-              selectedWords={ccSelectedWordSet}
-              onWordClick={handleCCWordClick}
+              selectedPositionKeys={selectedPositionKeys}
+              selectionCount={ccSelections.length}
+              definitions={definitions}
+              dragState={dragState}
+              onDragStart={handleDragStart}
+              onDragEnter={handleDragEnter}
+              onDragEnd={handleDragEnd}
               onClearWords={handleCCWordsClear}
               onExplainWords={openCCVocabularyReview}
             />

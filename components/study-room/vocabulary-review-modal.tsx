@@ -474,6 +474,9 @@ export function VocabularyReviewModal({
         <div className="px-6 py-4 border-t border-border shrink-0 bg-muted/20 flex gap-3 justify-end items-center">
           {step === "review_words" && rows.length > 0 && (
             <>
+              <Button variant="ghost" onClick={() => setStep("review_ai")} className="mr-auto text-muted-foreground">
+                {t("fillManually")}
+              </Button>
               <Button variant="outline" onClick={() => setStep("paste_json")}>
                 {t("goToPasteJson")}
               </Button>

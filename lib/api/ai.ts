@@ -18,6 +18,7 @@ export async function saveVocabularyToDB(
   videoId: string,
   definitions: Record<string, VocabularyExplanation>,
   options?: {
+    sourceMode?: "cc" | "scribe";
     dictation?: {
       contentHtml: string;
       segments: TranscriptSegment[];
@@ -30,6 +31,7 @@ export async function saveVocabularyToDB(
     body: JSON.stringify({
       videoId,
       definitions,
+      sourceMode: options?.sourceMode ?? "scribe",
       dictation: options?.dictation ?? null,
     })
   });
