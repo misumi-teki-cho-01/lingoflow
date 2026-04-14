@@ -1,20 +1,29 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { JsonValidationBadge } from "@/components/ui/json-validation-badge";
 import {
   CheckCircle2,
   ChevronLeft,
   Copy,
+  Languages,
   Save,
   TriangleAlert,
   Wand2,
 } from "lucide-react";
-import { ENHANCEMENT_PROMPT } from "@/lib/ai/prompts";
+import { getEnhancementPrompt } from "@/lib/ai/prompts";
 import { useJsonValidation } from "@/hooks/use-json-validation";
 import type { TranscriptSegment } from "@/types/transcript";
+
+const PROMPT_LANGUAGE_KEY = "lingo-prompt-language";
+
+const LANGUAGE_OPTIONS = [
+  { value: "zh", label: "中文" },
+  { value: "ja", label: "日本語" },
+  { value: "en", label: "English" },
+];
 
 type Step = "copy_prompt" | "paste_response" | "preview";
 type Notice = {
@@ -29,13 +38,13 @@ export interface SubtitleEnhanceModalProps {
   onSave: (enhanced: TranscriptSegment[]) => Promise<void>;
 }
 
-function buildEnhancePrompt(segments: TranscriptSegment[]): string {
+function buildEnhancePrompt(segments: TranscriptSegment[], lang: string): string {
   const input = JSON.stringify(
     segments.map((s) => ({ start_time: s.start_time, end_time: s.end_time, text: s.text })),
     null,
     2
   );
-  return `${ENHANCEMENT_PROMPT}\n\nTranscript:\n${input}`;
+  return `${getEnhancementPrompt(lang)}\n\nTranscript:\n${input}`;
 }
 
 export function SubtitleEnhanceModal({
@@ -45,6 +54,7 @@ export function SubtitleEnhanceModal({
   onSave,
 }: SubtitleEnhanceModalProps) {
   const t = useTranslations("studyRoom");
+  const locale = useLocale();
 
   const [step, setStep] = useState<Step>("copy_prompt");
   const [editablePrompt, setEditablePrompt] = useState("");
@@ -53,6 +63,12 @@ export function SubtitleEnhanceModal({
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [promptCopied, setPromptCopied] = useState(false);
+  const [promptLanguage, setPromptLanguage] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(PROMPT_LANGUAGE_KEY) || locale;
+    }
+    return locale;
+  });
   const pasteTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const jsonValidation = useJsonValidation(
@@ -63,13 +79,22 @@ export function SubtitleEnhanceModal({
   useEffect(() => {
     if (!visible) return;
     setStep("copy_prompt");
-    setEditablePrompt(buildEnhancePrompt(segments));
+    const saved = typeof window !== "undefined" ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
+    const lang = saved || locale;
+    setPromptLanguage(lang);
+    setEditablePrompt(buildEnhancePrompt(segments, lang));
     setPastedJson("");
     setEnhancedSegments([]);
     setIsSaving(false);
     setNotice(null);
     setPromptCopied(false);
-  }, [visible, segments]);
+  }, [visible, segments, locale]);
+
+  const handleLanguageChange = (lang: string) => {
+    setPromptLanguage(lang);
+    localStorage.setItem(PROMPT_LANGUAGE_KEY, lang);
+    setEditablePrompt(buildEnhancePrompt(segments, lang));
+  };
 
   if (!visible) return null;
 
@@ -173,13 +198,37 @@ export function SubtitleEnhanceModal({
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 bg-muted/10 custom-scrollbar">
           {step === "copy_prompt" && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t("promptEditableLabel")}</label>
-              <textarea
-                value={editablePrompt}
-                onChange={(e) => setEditablePrompt(e.target.value)}
-                className="min-h-[400px] w-full rounded-lg border border-input bg-background px-3 py-3 text-xs font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring custom-scrollbar"
-              />
+            <div className="space-y-4">
+              {/* Language selector */}
+              <div className="flex items-center gap-3">
+                <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium shrink-0">{t("promptLanguage")}</span>
+                <div className="flex items-center gap-1 rounded-full border border-border bg-muted/30 p-0.5">
+                  {LANGUAGE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleLanguageChange(opt.value)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                        promptLanguage === opt.value
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Editable prompt */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("promptEditableLabel")}</label>
+                <textarea
+                  value={editablePrompt}
+                  onChange={(e) => setEditablePrompt(e.target.value)}
+                  className="min-h-[380px] w-full rounded-lg border border-input bg-background px-3 py-3 text-xs font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring custom-scrollbar"
+                />
+              </div>
             </div>
           )}
 

@@ -1,6 +1,6 @@
 import type { TranscriptSegment } from "@/types/transcript";
 import { getGemini2_0FlashModel } from "./client";
-import { ENHANCEMENT_PROMPT, getExplainDictationPrompt } from "./prompts";
+import { getEnhancementPrompt, getExplainDictationPrompt } from "./prompts";
 
 export interface EnhancementResult {
   segments: TranscriptSegment[];
@@ -30,7 +30,7 @@ export async function enhanceSubtitlesForLearners(
 
     const model = getGemini2_0FlashModel();
     const result = await model.generateContent([
-      ENHANCEMENT_PROMPT,
+      getEnhancementPrompt("en"),
       `\nTranscript:\n${input}`,
     ]);
 
