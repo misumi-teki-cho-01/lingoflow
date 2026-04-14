@@ -20,6 +20,17 @@
     "subtitle": "AI 驱动的英语影子练习与精读工具",
     "description": "粘贴视频链接，AI 自动转录，开始你的影子跟读训练",
     "getStarted": "开始使用",
+    "login": {
+      "welcomeBack": "欢迎回来",
+      "subtitle": "登录账号以继续",
+      "emailLabel": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "密码",
+      "passwordPlaceholder": "••••••••",
+      "rememberMe": "记住我",
+      "submit": "登录",
+      "submitting": "登录中..."
+    },
     "features": {
       "shadow": {
         "title": "影子跟读",

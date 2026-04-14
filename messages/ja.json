@@ -20,6 +20,17 @@
     "subtitle": "AI搭載の英語シャドーイング＆精読ツール",
     "description": "動画リンクを貼り付け、AIが自動で文字起こし、シャドーイング練習を始めましょう",
     "getStarted": "始める",
+    "login": {
+      "welcomeBack": "おかえりなさい",
+      "subtitle": "アカウントにサインインして続けてください",
+      "emailLabel": "メールアドレス",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "パスワード",
+      "passwordPlaceholder": "••••••••",
+      "rememberMe": "ログイン状態を保持",
+      "submit": "サインイン",
+      "submitting": "サインイン中..."
+    },
     "features": {
       "shadow": {
         "title": "シャドーイング",

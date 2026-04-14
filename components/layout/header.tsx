@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { LocaleSwitcher } from "./locale-switcher";
+import { LogoutButton } from "./logout-button";
 
 export function Header() {
   const t = useTranslations("nav");
@@ -25,6 +26,7 @@ export function Header() {
           >
             {t("settings")}
           </Link>
+          <LogoutButton />
           <LocaleSwitcher />
         </nav>
       </div>

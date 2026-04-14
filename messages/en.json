@@ -20,6 +20,17 @@
     "subtitle": "AI-Powered English Shadowing & Intensive Reading",
     "description": "Paste a video link, let AI transcribe it, and start your shadowing practice",
     "getStarted": "Get Started",
+    "login": {
+      "welcomeBack": "Welcome back",
+      "subtitle": "Sign in to your account to continue",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "••••••••",
+      "rememberMe": "Remember me",
+      "submit": "Sign in",
+      "submitting": "Signing in..."
+    },
     "features": {
       "shadow": {
         "title": "Shadow Practice",
