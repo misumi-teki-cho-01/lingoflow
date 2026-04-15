@@ -151,16 +151,26 @@ export function getEnhancementPrompt(locale: string = "zh"): string {
     const isChinese = locale.startsWith("zh");
     const isJapanese = locale.startsWith("ja");
 
-    const FORMAT_RULE = `Return ONLY a JSON array with this exact format, no markdown fencing:\n[{"start_time": 0.0, "end_time": 2.5, "text": "Hello and welcome."}]\n\nRules:\n- Timestamps in seconds (float)\n- Ensure no gaps: each end_time should equal the next start_time\n- Ensure monotonically increasing timestamps\n- Return valid JSON only — no text before or after the array`;
+    const FORMAT_RULE = `Return ONLY a JSON array with this exact format, no markdown fencing:
+[{"start_time": 0.0, "end_time": 2.5, "text": "Hello and welcome."}]
+
+Rules:
+- Timestamps in seconds (float)
+- Return valid JSON only — no text before or after the array`;
 
     if (isChinese) {
         return `你是一位专业的语言学习助手。我将提供一段带时间戳的视频字幕，请按以下要求进行优化：
 
 1. 修正标点符号、大小写和拼写错误
-2. 将属于同一句话的片段合并（保留最早的 start_time 和最晚的 end_time）
-3. 将过长的句子拆分为自然的语音单元（每段一个完整的意思）
+2. 将属于同一句话的片段合并（取所有被合并片段中最小的 start_time 和最大的 end_time）
+3. 不要拆分句子——合并操作保持保守
 4. 删除 [Music]、[Applause] 等无意义的标注（除非有上下文意义）
 5. 严格保留原意——不要意译或改写
+
+时间戳规则：
+- 直接从输入中复制 start_time 和 end_time——不要自行推算或修改
+- 合并时使用被合并条目中最小的 start_time 和最大的 end_time
+- 片段之间存在间隙是可以接受的——不要为了填补间隙而调整时间戳
 
 ${FORMAT_RULE}`;
     }
@@ -169,10 +179,15 @@ ${FORMAT_RULE}`;
         return `あなたはプロの言語学習アシスタントです。タイムスタンプ付きの動画字幕を提供します。以下の改善を行ってください：
 
 1. 句読点・大文字/小文字・スペルミスを修正する
-2. 同じ文に属するフラグメントを結合する（最も早い start_time と最も遅い end_time を保持）
-3. 長すぎる文を自然な発話単位に分割する（1セグメントに1つの完結した考え）
+2. 同じ文に属するフラグメントを結合する（結合するフラグメントの中で最も小さい start_time と最も大きい end_time を使用する）
+3. 文を分割しない——結合は控えめに行う
 4. [Music]、[Applause] などの無意義なアノテーションを削除する（文脈上意味がある場合を除く）
 5. 原文の意味を厳密に保持する——言い換えや意訳は禁止
+
+タイムスタンプのルール：
+- start_time と end_time は入力からそのままコピーする——値を推測・再計算しない
+- 結合する場合は、結合対象の中で最も小さい start_time と最も大きい end_time を使用する
+- セグメント間にギャップがあっても許容される——ギャップを埋めるためにタイムスタンプを調整しない
 
 ${FORMAT_RULE}`;
     }
@@ -181,10 +196,15 @@ ${FORMAT_RULE}`;
     return `You are a language learning assistant. I'll give you a transcript from a video with timestamps. Please improve it for English learners:
 
 1. Fix punctuation, capitalization, and spelling errors
-2. Merge fragments that belong to the same sentence (keep the earliest start_time and latest end_time)
-3. Split run-on sentences into natural speech units (one complete thought per segment)
+2. Merge fragments that belong to the same sentence (use the earliest start_time and latest end_time of the merged fragments)
+3. Do NOT split sentences — keep merging conservative
 4. Remove filler annotations like [Music], [Applause] unless they provide context
 5. Preserve the original meaning exactly — do not paraphrase
+
+Timestamp rules:
+- Copy start_time and end_time exactly from the input — do not invent or recalculate values
+- When merging, use the smallest start_time and largest end_time among the merged items
+- Gaps between segments are acceptable — do not adjust timestamps to fill gaps
 
 ${FORMAT_RULE}`;
 }
