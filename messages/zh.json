@@ -136,7 +136,14 @@
     "enhancePreviewTitle": "预览并保存",
     "enhancePreviewDesc": "原始 {from} 条 → 润色后 {to} 条",
     "enhanceJsonInvalid": "JSON 格式无效，需要 [{start_time, end_time, text}] 数组",
-    "enhanceSaveSuccess": "字幕已润色并保存，页面已同步更新"
+    "enhanceSaveSuccess": "字幕已润色并保存，页面已同步更新",
+    "fillMode": "填词",
+    "fillHintNone": "无提示",
+    "fillHintWidth": "长度提示",
+    "fillHintReveal": "显示原文",
+    "fillCheck": "核对",
+    "fillRetry": "重试",
+    "fillHintLabel": "提示"
   },
   "video": {
     "back": "返回",

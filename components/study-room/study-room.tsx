@@ -7,6 +7,7 @@ import { useTranscriptSync } from "@/hooks/use-transcript-sync";
 import { useVocabularyReview } from "@/hooks/use-vocabulary-review";
 import { VideoControls } from "@/components/video/video-controls";
 import { TranscriptPanel } from "@/components/transcript/transcript-panel";
+import { FillPanel } from "@/components/fill/fill-panel";
 import { EchoEditor } from "@/components/scribe/echo-editor";
 import { VocabularyReviewModal } from "./vocabulary-review-modal";
 import { SubtitleEnhanceModal } from "./subtitle-enhance-modal";
@@ -29,6 +30,7 @@ import {
   ChevronLeft,
   Headphones,
   Captions,
+  PenLine,
   Download,
   Eye,
   EyeOff,
@@ -39,7 +41,7 @@ import {
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
-export type StudyMode = "scribe" | "cc";
+export type StudyMode = "scribe" | "cc" | "fill";
 
 export interface StudyRoomProps {
   videoId: string;
@@ -174,8 +176,8 @@ export function StudyRoom({
   const handleModeChange = useCallback((next: StudyMode) => {
     setMode(next);
     pushModeToUrl(next);
-    // Clear CC selections when switching away
-    if (next !== "cc") {
+    // Clear CC selections only when switching away from both cc and fill modes
+    if (next !== "cc" && next !== "fill") {
       setCcSelections([]);
       setDragState(null);
     }
@@ -402,6 +404,16 @@ export function StudyRoom({
             <Captions className="h-3.5 w-3.5" />
             {t("ccMode")}
           </button>
+          <button
+            onClick={() => handleModeChange("fill")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full transition-all font-medium ${mode === "fill"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            <PenLine className="h-3.5 w-3.5" />
+            {t("fillMode")}
+          </button>
         </div>
 
         {/* Action buttons */}
@@ -441,6 +453,18 @@ export function StudyRoom({
                 {t("enhanceSubtitles")}
               </Button>
             </>
+          )}
+
+          {mode === "fill" && ccSelections.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openCCVocabularyReview}
+              className="h-8 gap-1.5 text-xs text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {t("aiExplain")} ({ccSelections.length})
+            </Button>
           )}
 
           <Button variant="outline" size="sm" onClick={handleExport} className="h-8 gap-1.5 text-xs">
@@ -555,7 +579,7 @@ export function StudyRoom({
               initialContent={initialDictationHtml}
               definitions={definitions}
             />
-          ) : (
+          ) : mode === "cc" ? (
             <TranscriptPanel
               segments={liveSegments}
               activeSegmentIndex={activeSegmentIndex}
@@ -563,6 +587,22 @@ export function StudyRoom({
               source={transcriptSource}
               errorMessage={transcriptError}
               wordClickMode
+              selectedPositionKeys={selectedPositionKeys}
+              selectionCount={ccSelections.length}
+              definitions={definitions}
+              dragState={dragState}
+              onDragStart={handleDragStart}
+              onDragEnter={handleDragEnter}
+              onDragEnd={handleDragEnd}
+              onClearWords={handleCCWordsClear}
+              onExplainWords={openCCVocabularyReview}
+            />
+          ) : (
+            <FillPanel
+              segments={liveSegments}
+              activeSegmentIndex={activeSegmentIndex}
+              onSegmentClick={player.seekTo}
+              errorMessage={transcriptError}
               selectedPositionKeys={selectedPositionKeys}
               selectionCount={ccSelections.length}
               definitions={definitions}

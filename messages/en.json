@@ -136,7 +136,14 @@
     "enhancePreviewTitle": "Preview & Save",
     "enhancePreviewDesc": "Original {from} segments → Enhanced {to} segments",
     "enhanceJsonInvalid": "Invalid JSON. Expected array of objects with start_time, end_time, and text",
-    "enhanceSaveSuccess": "Subtitles enhanced and saved. Page updated."
+    "enhanceSaveSuccess": "Subtitles enhanced and saved. Page updated.",
+    "fillMode": "Fill-in",
+    "fillHintNone": "No Hint",
+    "fillHintWidth": "Length Hint",
+    "fillHintReveal": "Show Answer",
+    "fillCheck": "Check",
+    "fillRetry": "Retry",
+    "fillHintLabel": "Hint"
   },
   "video": {
     "back": "Back",

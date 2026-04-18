@@ -136,7 +136,14 @@
     "enhancePreviewTitle": "プレビューして保存",
     "enhancePreviewDesc": "元の{from}件 → 改善後{to}件",
     "enhanceJsonInvalid": "無効なJSON。start_time、end_time、textを持つオブジェクトの配列が必要です",
-    "enhanceSaveSuccess": "字幕が改善され保存されました。ページが更新されました。"
+    "enhanceSaveSuccess": "字幕が改善され保存されました。ページが更新されました。",
+    "fillMode": "穴埋め",
+    "fillHintNone": "ヒントなし",
+    "fillHintWidth": "長さヒント",
+    "fillHintReveal": "答え表示",
+    "fillCheck": "確認",
+    "fillRetry": "やり直し",
+    "fillHintLabel": "ヒント"
   },
   "video": {
     "back": "戻る",
