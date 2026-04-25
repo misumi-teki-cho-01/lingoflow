@@ -34,6 +34,9 @@ type Notice = {
 export interface SubtitleEnhanceModalProps {
   visible: boolean;
   segments: TranscriptSegment[];
+  /** Original raw segments before any AI enhancement. When provided, shows a
+   *  source toggle so the user can re-enhance from scratch. */
+  rawSegments?: TranscriptSegment[];
   onCancel: () => void;
   onSave: (enhanced: TranscriptSegment[]) => Promise<void>;
 }
@@ -50,12 +53,15 @@ function buildEnhancePrompt(segments: TranscriptSegment[], lang: string): string
 export function SubtitleEnhanceModal({
   visible,
   segments,
+  rawSegments,
   onCancel,
   onSave,
 }: SubtitleEnhanceModalProps) {
   const t = useTranslations("studyRoom");
   const locale = useLocale();
 
+  // "current" = already-enhanced liveSegments; "raw" = original YouTube subtitles
+  const [sourceMode, setSourceMode] = useState<"current" | "raw">("current");
   const [step, setStep] = useState<Step>("copy_prompt");
   const [editablePrompt, setEditablePrompt] = useState("");
   const [pastedJson, setPastedJson] = useState("");
@@ -79,6 +85,7 @@ export function SubtitleEnhanceModal({
   useEffect(() => {
     if (!visible) return;
     setStep("copy_prompt");
+    setSourceMode("current");
     const saved = typeof window !== "undefined" ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
     const lang = saved || locale;
     setPromptLanguage(lang);
@@ -90,10 +97,18 @@ export function SubtitleEnhanceModal({
     setPromptCopied(false);
   }, [visible, segments, locale]);
 
+  const activeSegments = sourceMode === "raw" && rawSegments ? rawSegments : segments;
+
   const handleLanguageChange = (lang: string) => {
     setPromptLanguage(lang);
     localStorage.setItem(PROMPT_LANGUAGE_KEY, lang);
-    setEditablePrompt(buildEnhancePrompt(segments, lang));
+    setEditablePrompt(buildEnhancePrompt(activeSegments, lang));
+  };
+
+  const handleSourceModeChange = (mode: "current" | "raw") => {
+    setSourceMode(mode);
+    const src = mode === "raw" && rawSegments ? rawSegments : segments;
+    setEditablePrompt(buildEnhancePrompt(src, promptLanguage));
   };
 
   if (!visible) return null;
@@ -199,6 +214,35 @@ export function SubtitleEnhanceModal({
         <div className="flex-1 overflow-y-auto p-6 bg-muted/10 custom-scrollbar">
           {step === "copy_prompt" && (
             <div className="space-y-4">
+              {/* Source selector — only shown when raw segments are available */}
+              {rawSegments && rawSegments.length > 0 && (
+                <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/40 px-3 py-2">
+                  <span className="text-sm font-medium shrink-0 text-amber-700 dark:text-amber-400">
+                    {t("enhanceSource")}
+                  </span>
+                  <div className="flex items-center gap-1 rounded-full border border-amber-300 dark:border-amber-700 bg-background p-0.5">
+                    {(["current", "raw"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => handleSourceModeChange(mode)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                          sourceMode === mode
+                            ? "bg-amber-500 text-white shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {mode === "current" ? t("enhanceSourceCurrent") : t("enhanceSourceRaw")}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-xs text-amber-600 dark:text-amber-500">
+                    {sourceMode === "raw"
+                      ? t("enhanceSourceRawHint", { count: rawSegments.length })
+                      : t("enhanceSourceCurrentHint", { count: segments.length })}
+                  </span>
+                </div>
+              )}
+
               {/* Language selector */}
               <div className="flex items-center gap-3">
                 <Languages className="h-4 w-4 text-muted-foreground shrink-0" />

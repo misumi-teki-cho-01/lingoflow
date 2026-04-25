@@ -27,6 +27,11 @@ interface TranscriptPanelProps {
   selectionCount?: number;
   /** Saved vocabulary definitions — used to show definition popover on click. */
   definitions?: Record<string, VocabularyExplanation>;
+  /**
+   * Position-keyed map "segIdx-wordIdx" → definition (CC mode).
+   * When provided, definition indicators show only at these exact positions.
+   */
+  definitionPositionMap?: Map<string, VocabularyExplanation>;
   dragState?: DragState | null;
   onDragStart?: (segIdx: number, wordIdx: number) => void;
   onDragEnter?: (segIdx: number, wordIdx: number) => void;
@@ -46,6 +51,7 @@ export function TranscriptPanel({
   selectedPositionKeys,
   selectionCount = 0,
   definitions = {},
+  definitionPositionMap,
   dragState,
   onDragStart,
   onDragEnter,
@@ -238,7 +244,8 @@ export function TranscriptPanel({
                   searchQuery={searchQuery}
                   wordClickMode={wordClickMode}
                   selectedPositionKeys={selectedPositionKeys}
-                  definitionKeyMap={definitionKeyMap}
+                  definitionKeyMap={definitionPositionMap ? undefined : definitionKeyMap}
+                  definitionPositionMap={definitionPositionMap}
                   onDefinitionClick={handleDefinitionClick}
                   dragState={dragState}
                   onDragStart={onDragStart}

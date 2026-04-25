@@ -97,6 +97,8 @@ export function StudyRoom({
 
   // Live segments (can be updated after AI enhancement)
   const [liveSegments, setLiveSegments] = useState<TranscriptSegment[]>(initialSegments);
+  // Keep a stable reference to the original segments for "re-enhance from raw" option
+  const rawSegmentsRef = useRef<TranscriptSegment[]>(initialSegments);
 
   // CC mode — position-based selections + drag state
   const [ccSelections, setCcSelections] = useState<CcSelection[]>([]);
@@ -146,6 +148,24 @@ export function StudyRoom({
     closeReview,
     setDefinitions,
   } = useVocabularyReview(initialDefinitions);
+
+  // Derived: position-keyed definition map — only positions explicitly marked in
+  // ccSelections that also have a saved definition get an indicator.
+  // This restricts definition underlines to the SPECIFIC marked occurrence rather
+  // than every occurrence of the same word across the transcript.
+  const definitionPositionMap = useMemo(() => {
+    const map = new Map<string, VocabularyExplanation>();
+    ccSelections.forEach((sel) => {
+      const key = sel.text.trim().toLowerCase();
+      const def = definitions[key] ?? definitions[sel.text.trim()];
+      if (def) {
+        for (let i = sel.startWordIndex; i <= sel.endWordIndex; i++) {
+          map.set(`${sel.segmentIndex}-${i}`, def);
+        }
+      }
+    });
+    return map;
+  }, [ccSelections, definitions]);
 
   // ── Player ────────────────────────────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -271,15 +291,21 @@ export function StudyRoom({
           s.startWordIndex <= maxIdx &&
           s.endWordIndex >= minIdx
       );
+      // Allow deselecting (removing) even if the word has a definition
       if (overlaps.length > 0) {
         return prevSels.filter((s) => !overlaps.includes(s));
+      }
+      // Don't add to the explanation queue if this phrase already has a saved definition
+      const phraseKey = phrase.toLowerCase();
+      if (definitions[phraseKey] !== undefined || definitions[phrase] !== undefined) {
+        return prevSels;
       }
       return [
         ...prevSels,
         { id, segmentIndex, startWordIndex: minIdx, endWordIndex: maxIdx, text: phrase },
       ];
     });
-  }, [dragState, liveSegments]);
+  }, [dragState, liveSegments, definitions]);
 
   const handleCCWordsClear = useCallback(() => {
     setCcSelections([]);
@@ -590,6 +616,7 @@ export function StudyRoom({
               selectedPositionKeys={selectedPositionKeys}
               selectionCount={ccSelections.length}
               definitions={definitions}
+              definitionPositionMap={definitionPositionMap}
               dragState={dragState}
               onDragStart={handleDragStart}
               onDragEnter={handleDragEnter}
@@ -606,6 +633,7 @@ export function StudyRoom({
               selectedPositionKeys={selectedPositionKeys}
               selectionCount={ccSelections.length}
               definitions={definitions}
+              definitionPositionMap={definitionPositionMap}
               dragState={dragState}
               onDragStart={handleDragStart}
               onDragEnter={handleDragEnter}
@@ -628,12 +656,14 @@ export function StudyRoom({
         getContextText={mode === "scribe" ? getScribeContextText : getCCContextText}
         showPersistOption={mode === "scribe"}
         onFeedback={showFeedback}
+        existingDefinitions={mode !== "scribe" ? definitions : undefined}
       />
 
       {/* ── Subtitle Enhancement Modal ── */}
       <SubtitleEnhanceModal
         visible={showEnhanceModal}
         segments={liveSegments}
+        rawSegments={rawSegmentsRef.current}
         onCancel={() => setShowEnhanceModal(false)}
         onSave={handleSaveEnhancedTranscript}
       />

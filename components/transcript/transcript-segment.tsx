@@ -26,6 +26,14 @@ interface TranscriptSegmentProps {
   onDragEnd?: () => void;
   /** Map of lowercase word → definition, for showing popover on click in CC mode. */
   definitionKeyMap?: Map<string, VocabularyExplanation>;
+  /**
+   * Position-keyed definition map: "segIdx-wordIdx" → definition.
+   * When provided, definition indicators are shown ONLY at these exact positions
+   * (position-specific, not text-match-based). Used in CC / fill modes so that
+   * only the specifically-marked occurrence shows the underline, not every
+   * occurrence of the same word across the transcript.
+   */
+  definitionPositionMap?: Map<string, VocabularyExplanation>;
   onDefinitionClick?: (cleanWord: string, x: number, y: number) => void;
 }
 
@@ -61,6 +69,7 @@ function WordClickableText({
   onDragEnter,
   onDragEnd,
   definitionKeyMap,
+  definitionPositionMap,
   onDefinitionClick,
 }: {
   text: string;
@@ -71,15 +80,29 @@ function WordClickableText({
   onDragEnter?: (segIdx: number, wordIdx: number) => void;
   onDragEnd?: () => void;
   definitionKeyMap?: Map<string, VocabularyExplanation>;
+  definitionPositionMap?: Map<string, VocabularyExplanation>;
   onDefinitionClick?: (cleanWord: string, x: number, y: number) => void;
 }) {
   const tokens = text.split(/(\s+)/);
 
-  // ── Phrase-aware definition lookup ────────────────────────────────────────
-  // Build a map from word-index → VocabularyExplanation, supporting both
-  // single-word keys ("running") and multi-word phrase keys ("look forward to").
+  // ── Definition lookup ─────────────────────────────────────────────────────
+  // Two modes:
+  //  • definitionPositionMap provided → position-specific (CC/fill modes):
+  //    only the exact "segIdx-wordIdx" positions that were marked show indicators.
+  //  • fallback text-based → phrase-aware scan (scribe mode / legacy).
   const defAtWordIdx = new Map<number, VocabularyExplanation>();
-  if (definitionKeyMap && definitionKeyMap.size > 0) {
+
+  if (definitionPositionMap) {
+    // Position-based: iterate all word tokens and check the position map directly.
+    let wi = 0;
+    for (const token of tokens) {
+      if (/^\s+$/.test(token)) continue;
+      const posKey = `${segmentIndex}-${wi}`;
+      const def = definitionPositionMap.get(posKey);
+      if (def) defAtWordIdx.set(wi, def);
+      wi++;
+    }
+  } else if (definitionKeyMap && definitionKeyMap.size > 0) {
     const nonWsTokens = tokens.filter((t) => !/^\s+$/.test(t));
 
     // Pass 1: phrase matches (keys that contain spaces).
@@ -197,6 +220,7 @@ export const TranscriptSegmentRow = memo(
         onDragEnter,
         onDragEnd,
         definitionKeyMap,
+        definitionPositionMap,
         onDefinitionClick,
       },
       ref
@@ -271,6 +295,7 @@ export const TranscriptSegmentRow = memo(
                 onDragEnter={onDragEnter}
                 onDragEnd={onDragEnd}
                 definitionKeyMap={definitionKeyMap}
+                definitionPositionMap={definitionPositionMap}
                 onDefinitionClick={onDefinitionClick}
               />
             ) : (

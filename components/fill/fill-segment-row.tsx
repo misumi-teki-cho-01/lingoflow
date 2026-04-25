@@ -32,6 +32,8 @@ export interface FillSegmentRowProps {
   // Post-check word marking (shared with CC mode)
   selectedPositionKeys?: Set<string>;
   definitionKeyMap?: Map<string, VocabularyExplanation>;
+  /** Position-keyed map "segIdx-wordIdx" → definition (CC mode). */
+  definitionPositionMap?: Map<string, VocabularyExplanation>;
   onDefinitionClick?: (cleanWord: string, x: number, y: number) => void;
   dragState?: DragState | null;
   onDragStart?: (segIdx: number, wordIdx: number) => void;
@@ -78,6 +80,7 @@ export function FillSegmentRow({
   onRetry,
   selectedPositionKeys,
   definitionKeyMap,
+  definitionPositionMap,
   onDefinitionClick,
   dragState,
   onDragStart,
@@ -96,7 +99,13 @@ export function FillSegmentRow({
     if (onDefinitionClick) {
       onDefinitionClick(cleanWord, x, y);
     } else {
-      const wordData = definitionKeyMap?.get(cleanWord.toLowerCase());
+      // Look up by text — works for both position-based and text-based modes
+      const wordData = definitionKeyMap?.get(cleanWord.toLowerCase())
+        ?? (definitionPositionMap
+          ? Array.from(definitionPositionMap.values()).find(
+              (d) => d.original_text.toLowerCase() === cleanWord
+            )
+          : undefined);
       if (!wordData) return;
       setPopup((prev) =>
         prev.visible && prev.wordData === wordData
@@ -108,9 +117,18 @@ export function FillSegmentRow({
 
   const tokens = tokenizeForFill(segment.text);
 
-  // Build phrase-aware definition map for post-check spans
+  // Build definition map for post-check spans (position-based preferred)
   const defAtWordIdx = new Map<number, VocabularyExplanation>();
-  if (definitionKeyMap && definitionKeyMap.size > 0) {
+
+  if (definitionPositionMap) {
+    // Position-specific: only show indicator at marked word indices
+    tokens.forEach((token) => {
+      if (token.type !== "word") return;
+      const posKey = `${index}-${token.wordIdx}`;
+      const def = definitionPositionMap.get(posKey);
+      if (def) defAtWordIdx.set(token.wordIdx, def);
+    });
+  } else if (definitionKeyMap && definitionKeyMap.size > 0) {
     const wordTokens = tokens
       .filter((t): t is Extract<FillToken, { type: "word" }> => t.type === "word")
       .map((t) => t.word);

@@ -22,6 +22,8 @@ interface FillPanelProps {
   selectedPositionKeys?: Set<string>;
   selectionCount?: number;
   definitions?: Record<string, VocabularyExplanation>;
+  /** Position-keyed map "segIdx-wordIdx" → definition (CC mode). */
+  definitionPositionMap?: Map<string, VocabularyExplanation>;
   dragState?: DragState | null;
   onDragStart?: (segIdx: number, wordIdx: number) => void;
   onDragEnter?: (segIdx: number, wordIdx: number) => void;
@@ -41,6 +43,7 @@ export function FillPanel({
   selectedPositionKeys,
   selectionCount = 0,
   definitions = {},
+  definitionPositionMap,
   dragState,
   onDragStart,
   onDragEnter,
@@ -239,7 +242,8 @@ export function FillPanel({
                 onCheck={() => handleCheck(idx)}
                 onRetry={() => handleRetry(idx)}
                 selectedPositionKeys={selectedPositionKeys}
-                definitionKeyMap={definitionKeyMap}
+                definitionKeyMap={definitionPositionMap ? undefined : definitionKeyMap}
+                definitionPositionMap={definitionPositionMap}
                 onDefinitionClick={handleDefinitionClick}
                 dragState={dragState}
                 onDragStart={onDragStart}

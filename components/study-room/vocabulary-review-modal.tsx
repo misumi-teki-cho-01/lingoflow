@@ -48,6 +48,12 @@ export interface VocabularyReviewModalProps {
   getContextText: () => Promise<string>;
   showPersistOption?: boolean;
   onFeedback?: (notice: Notice) => void;
+  /**
+   * Already-saved definitions. Pre-populates rows whose word already has a
+   * definition, and excludes those words from the AI prompt (they don't need
+   * a new explanation).
+   */
+  existingDefinitions?: Record<string, VocabularyExplanation>;
 }
 
 interface RowState {
@@ -55,6 +61,54 @@ interface RowState {
   original_text: string;
   canonical_form: string;
   explanation: string;
+}
+
+/** Renders two groups of word badges: new words (indigo) and already-defined (emerald strikethrough). */
+function WordBadgeSection({
+  newWords,
+  alreadyDefinedWords,
+  selectedWordsLabel,
+  alreadyDefinedLabel,
+}: {
+  newWords: string[];
+  alreadyDefinedWords: string[];
+  selectedWordsLabel: string;
+  alreadyDefinedLabel: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-background px-4 py-3 space-y-2.5">
+      {newWords.length > 0 && (
+        <div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5">{selectedWordsLabel}</div>
+          <div className="flex flex-wrap gap-2">
+            {newWords.map((word) => (
+              <span
+                key={word}
+                className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs text-indigo-700"
+              >
+                {word}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {alreadyDefinedWords.length > 0 && (
+        <div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5">{alreadyDefinedLabel}</div>
+          <div className="flex flex-wrap gap-2">
+            {alreadyDefinedWords.map((word) => (
+              <span
+                key={word}
+                className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-700"
+              >
+                ✓ {word}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function normalizeDefinitions(input: string): VocabularyExplanation[] {
@@ -96,6 +150,7 @@ export function VocabularyReviewModal({
   getContextText,
   showPersistOption = false,
   onFeedback,
+  existingDefinitions = {},
 }: VocabularyReviewModalProps) {
   const t = useTranslations("studyRoom");
   const locale = useLocale();
@@ -137,21 +192,40 @@ export function VocabularyReviewModal({
     setPromptCopied(false);
     fetchedContextRef.current = "";
     setRows(
-      initialWords.map((w) => ({
-        id: w.id,
-        original_text: w.text.trim(),
-        canonical_form: "",
-        explanation: "",
-      }))
+      initialWords.map((w) => {
+        const key = w.text.trim().toLowerCase();
+        const existing =
+          existingDefinitions[key] ??
+          existingDefinitions[w.text.trim()];
+        return {
+          id: w.id,
+          original_text: w.text.trim(),
+          canonical_form: existing?.canonical_form ?? "",
+          explanation: existing?.explanation ?? "",
+        };
+      })
     );
     // Read persisted language preference
     const saved = typeof window !== "undefined" ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
     setPromptLanguage(saved || locale);
+  // existingDefinitions intentionally omitted — we only want to re-init when the
+  // modal opens (visible) or the word list changes, not on every definition update.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, initialWords, initialStep, locale]);
 
   const uniqueWords = useMemo(
     () => Array.from(new Set(rows.map((row) => row.original_text).filter(Boolean))),
     [rows]
+  );
+
+  // Words that don't yet have a definition — these are the only ones sent to the AI.
+  const newWordsForPrompt = useMemo(
+    () =>
+      uniqueWords.filter((w) => {
+        const key = w.toLowerCase();
+        return !existingDefinitions[key] && !existingDefinitions[w];
+      }),
+    [uniqueWords, existingDefinitions]
   );
 
   if (!visible) return null;
@@ -167,9 +241,11 @@ export function VocabularyReviewModal({
 
   const buildPrompt = (context: string, lang: string) => {
     const template = getExplainDictationPrompt(lang);
+    // Only include words that don't already have a saved definition
+    const wordsForAI = newWordsForPrompt.length > 0 ? newWordsForPrompt : uniqueWords;
     return template
       .replace("{{text}}", context)
-      .replace("{{words}}", JSON.stringify(uniqueWords, null, 2));
+      .replace("{{words}}", JSON.stringify(wordsForAI, null, 2));
   };
 
   const handleGoToPromptEditor = async () => {
@@ -356,20 +432,13 @@ export function VocabularyReviewModal({
                 </div>
               </div>
 
-              {/* Selected words reminder */}
-              <div className="rounded-lg border border-border bg-background px-4 py-3">
-                <div className="text-sm font-medium">{t("selectedWords")}</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {uniqueWords.map((word) => (
-                    <span
-                      key={word}
-                      className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs text-indigo-700"
-                    >
-                      {word}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              {/* Selected words — split into new (sent to AI) and already-defined (skipped) */}
+              <WordBadgeSection
+                newWords={newWordsForPrompt}
+                alreadyDefinedWords={uniqueWords.filter(w => !newWordsForPrompt.includes(w))}
+                selectedWordsLabel={t("selectedWords")}
+                alreadyDefinedLabel={t("alreadyDefined")}
+              />
 
               {/* Editable prompt */}
               <div className="space-y-2">
@@ -384,19 +453,12 @@ export function VocabularyReviewModal({
           ) : step === "paste_json" ? (
             /* ── Paste JSON ── */
             <div className="space-y-4">
-              <div className="rounded-lg border border-border bg-background px-4 py-3">
-                <div className="text-sm font-medium">{t("selectedWords")}</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {uniqueWords.map((word) => (
-                    <span
-                      key={word}
-                      className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs text-indigo-700"
-                    >
-                      {word}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <WordBadgeSection
+                newWords={newWordsForPrompt}
+                alreadyDefinedWords={uniqueWords.filter(w => !newWordsForPrompt.includes(w))}
+                selectedWordsLabel={t("selectedWords")}
+                alreadyDefinedLabel={t("alreadyDefined")}
+              />
 
               <div className="space-y-2">
                 <label htmlFor="vocabulary-json" className="text-sm font-medium">
@@ -435,35 +497,56 @@ export function VocabularyReviewModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 align-top font-medium text-indigo-500">
-                        {row.original_text}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {step === "review_words" ? (
-                          <span className="text-muted-foreground">{t("waitingForJson")}</span>
-                        ) : (
-                          <Input
-                            value={row.canonical_form}
-                            onChange={(e) => handleUpdateRow(row.id, "canonical_form", e.target.value)}
-                            className="h-8 text-sm"
-                          />
-                        )}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {step === "review_words" ? (
-                          <span className="text-muted-foreground">{t("pasteJsonHintInline")}</span>
-                        ) : (
-                          <textarea
-                            value={row.explanation}
-                            onChange={(e) => handleUpdateRow(row.id, "explanation", e.target.value)}
-                            className="w-full min-h-[60px] text-sm p-2 rounded-md border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring custom-scrollbar"
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {rows.map((row) => {
+                    const isPreFilled = !!row.explanation && (
+                      !!existingDefinitions[row.original_text.toLowerCase()] ||
+                      !!existingDefinitions[row.original_text]
+                    );
+                    return (
+                      <tr key={row.id} className={`hover:bg-muted/30 transition-colors ${isPreFilled ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""}`}>
+                        <td className="px-4 py-3 align-top">
+                          <span className={`font-medium ${isPreFilled ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-500"}`}>
+                            {row.original_text}
+                          </span>
+                          {isPreFilled && (
+                            <span className="ml-1.5 text-[10px] font-medium text-emerald-500 bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded-full">
+                              ✓ {t("alreadyDefined")}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          {step === "review_words" ? (
+                            isPreFilled ? (
+                              <span className="text-sm text-muted-foreground">{row.canonical_form}</span>
+                            ) : (
+                              <span className="text-muted-foreground">{t("waitingForJson")}</span>
+                            )
+                          ) : (
+                            <Input
+                              value={row.canonical_form}
+                              onChange={(e) => handleUpdateRow(row.id, "canonical_form", e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                          )}
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          {step === "review_words" ? (
+                            isPreFilled ? (
+                              <span className="text-sm text-muted-foreground line-clamp-2">{row.explanation}</span>
+                            ) : (
+                              <span className="text-muted-foreground">{t("pasteJsonHintInline")}</span>
+                            )
+                          ) : (
+                            <textarea
+                              value={row.explanation}
+                              onChange={(e) => handleUpdateRow(row.id, "explanation", e.target.value)}
+                              className="w-full min-h-[60px] text-sm p-2 rounded-md border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring custom-scrollbar"
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
