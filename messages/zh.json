@@ -59,7 +59,16 @@
     "errorNoSubtitles": "该视频没有可用字幕，请尝试其他视频",
     "errorInvalidUrl": "请输入有效的 YouTube 链接",
     "errorBilibiliUnsupported": "Bilibili 支持即将上线，请使用 YouTube 链接",
-    "errorSaveFailed": "视频保存失败，请重试"
+    "errorSaveFailed": "视频保存失败，请重试",
+    "searchPlaceholder": "搜索视频标题或频道...",
+    "allChannels": "全部",
+    "channelGroup": "{name} · {count} 个视频",
+    "noSearchResults": "没有找到匹配的视频",
+    "viewGrid": "网格视图",
+    "viewChannels": "按频道",
+    "loadMore": "加载更多",
+    "loadingMore": "加载中...",
+    "noMoreVideos": "已加载全部视频"
   },
   "player": {
     "play": "播放",

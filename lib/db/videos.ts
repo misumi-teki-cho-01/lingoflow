@@ -28,16 +28,17 @@ export async function getVideoByExtId(videoExtId: string) {
 }
 
 /**
- * Fetch the most recently imported videos for the dashboard.
+ * Fetch a page of recently imported videos for the dashboard.
+ * Uses closed-interval range so the query is compatible with Supabase RLS.
  */
-export async function getRecentVideos(limit: number = 50) {
+export async function getRecentVideos(limit: number = 24, offset: number = 0) {
   try {
     const supabase = await createClient();
     const { data } = await supabase
       .from("videos")
-      .select("video_ext_id, title, channel_name, thumbnail_url, duration, source_type")
+      .select("video_ext_id, title, channel_name, thumbnail_url, duration, source_type, created_at")
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
     return data || [];
   } catch {
     return [];

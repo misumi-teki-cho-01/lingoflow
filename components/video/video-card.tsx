@@ -1,6 +1,11 @@
+"use client";
+
 import { Link } from "@/i18n/navigation";
 import { Play, Clock } from "lucide-react";
 import { formatTime } from "@/lib/utils/format";
+import { formatDistanceToNow } from "date-fns";
+import { zhCN, ja, enUS, type Locale } from "date-fns/locale";
+import { useLocale } from "next-intl";
 
 export interface VideoCardData {
   video_ext_id: string;
@@ -9,7 +14,14 @@ export interface VideoCardData {
   thumbnail_url: string | null;
   duration: number | null;
   source_type: string;
+  created_at: string;
 }
+
+const DATE_LOCALES: Record<string, Locale> = {
+  zh: zhCN,
+  ja: ja,
+  en: enUS,
+};
 
 interface VideoCardProps {
   video: VideoCardData;
@@ -17,12 +29,18 @@ interface VideoCardProps {
 
 /**
  * Reusable video card — links to /video/{video_ext_id}.
- * Displays thumbnail, title, channel name, and duration badge.
+ * Displays thumbnail, title, channel name, duration badge, and relative import time.
  */
 export function VideoCard({ video }: VideoCardProps) {
+  const locale = useLocale();
   const thumbnail =
     video.thumbnail_url ??
     `https://img.youtube.com/vi/${video.video_ext_id}/hqdefault.jpg`;
+
+  const relativeTime = formatDistanceToNow(new Date(video.created_at), {
+    addSuffix: true,
+    locale: DATE_LOCALES[locale] ?? enUS,
+  });
 
   return (
     <Link
@@ -63,6 +81,7 @@ export function VideoCard({ video }: VideoCardProps) {
         {video.channel_name && (
           <p className="text-xs text-muted-foreground truncate">{video.channel_name}</p>
         )}
+        <p className="text-[10px] text-muted-foreground/50">{relativeTime}</p>
       </div>
     </Link>
   );

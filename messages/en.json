@@ -59,7 +59,16 @@
     "errorNoSubtitles": "No subtitles available for this video. Try another one.",
     "errorInvalidUrl": "Please enter a valid YouTube link",
     "errorBilibiliUnsupported": "Bilibili support coming soon. Please use a YouTube link.",
-    "errorSaveFailed": "Failed to save video. Please try again."
+    "errorSaveFailed": "Failed to save video. Please try again.",
+    "searchPlaceholder": "Search videos...",
+    "allChannels": "All",
+    "channelGroup": "{name} · {count} videos",
+    "noSearchResults": "No matching videos",
+    "viewGrid": "Grid view",
+    "viewChannels": "By channel",
+    "loadMore": "Load more",
+    "loadingMore": "Loading...",
+    "noMoreVideos": "All videos loaded"
   },
   "player": {
     "play": "Play",

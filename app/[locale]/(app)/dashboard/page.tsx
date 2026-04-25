@@ -1,12 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import { VideoImportForm } from "@/components/video/video-import-form";
-import { VideoCard, type VideoCardData } from "@/components/video/video-card";
+import { type VideoCardData } from "@/components/video/video-card";
+import { DashboardVideoLibrary } from "@/components/dashboard/dashboard-video-library";
 import { getRecentVideos } from "@/lib/db/videos";
-import { Play, Tv2, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 // ── Data fetching ──────────────────────────────────────────────────────────
 async function getImportedVideos(): Promise<VideoCardData[]> {
-  const data = await getRecentVideos(50);
+  const data = await getRecentVideos(24);
   return (data as VideoCardData[]) ?? [];
 }
 
@@ -44,28 +45,7 @@ export default async function DashboardPage({
       </section>
 
       {/* ── Video Library ── */}
-      <section>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-4">
-          <Tv2 className="h-4 w-4" />
-          {t("recentImports")}
-        </h2>
-
-        {videos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
-            <div className="rounded-full bg-muted p-6 mb-4">
-              <Play className="h-8 w-8 opacity-30" />
-            </div>
-            <p className="font-medium">{t("noVideos")}</p>
-            <p className="text-sm mt-1 opacity-60">{t("noVideosHint")}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {videos.map((video) => (
-              <VideoCard key={video.video_ext_id} video={video} />
-            ))}
-          </div>
-        )}
-      </section>
+      <DashboardVideoLibrary videos={videos} />
 
     </div>
   );

@@ -59,7 +59,16 @@
     "errorNoSubtitles": "この動画に字幕がありません。別の動画をお試しください。",
     "errorInvalidUrl": "有効なYouTubeリンクを入力してください",
     "errorBilibiliUnsupported": "Bilibiliサポートは待機中です。YouTubeリンクを使用してください。",
-    "errorSaveFailed": "動画の保存に失敗しました。御再試ください。"
+    "errorSaveFailed": "動画の保存に失敗しました。御再試ください。",
+    "searchPlaceholder": "動画を検索...",
+    "allChannels": "すべて",
+    "channelGroup": "{name} · {count} 本",
+    "noSearchResults": "一致する動画なし",
+    "viewGrid": "グリッド表示",
+    "viewChannels": "チャンネル別",
+    "loadMore": "もっと読み込む",
+    "loadingMore": "読み込み中...",
+    "noMoreVideos": "すべての動画を読み込みました"
   },
   "player": {
     "play": "再生",
