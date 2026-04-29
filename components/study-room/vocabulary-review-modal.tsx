@@ -168,6 +168,13 @@ export function VocabularyReviewModal({
     "vocabulary"
   );
 
+  // Apply auto-corrected text back to the textarea when the hook fixes it
+  useEffect(() => {
+    if (jsonValidation.correctedText !== null) {
+      setPastedJson(jsonValidation.correctedText);
+    }
+  }, [jsonValidation.correctedText]);
+
   // Prompt editor state
   const [promptLanguage, setPromptLanguage] = useState<string>(() => {
     if (typeof window !== "undefined") {

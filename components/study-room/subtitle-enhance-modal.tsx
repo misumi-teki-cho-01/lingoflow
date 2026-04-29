@@ -82,6 +82,13 @@ export function SubtitleEnhanceModal({
     "segments"
   );
 
+  // Apply auto-corrected text back to the textarea when the hook fixes it
+  useEffect(() => {
+    if (jsonValidation.correctedText !== null) {
+      setPastedJson(jsonValidation.correctedText);
+    }
+  }, [jsonValidation.correctedText]);
+
   useEffect(() => {
     if (!visible) return;
     setStep("copy_prompt");

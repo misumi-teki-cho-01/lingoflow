@@ -12,8 +12,84 @@ export interface JsonValidationState {
   errorCol: number | null;
   errorMessage: string | null;
   itemCount: number | null;
+  /** Auto-corrected text when a fixable error was detected, null otherwise. */
+  correctedText: string | null;
   jumpToError: (textareaEl: HTMLTextAreaElement | null) => void;
 }
+
+// ── Auto-fix pipeline ─────────────────────────────────────────────────────
+
+/**
+ * Escape unescaped double quotes that appear inside JSON string values.
+ *
+ * Algorithm: walk char-by-char tracking whether we are inside a string.
+ * When inside a string, a `"` is treated as a closing quote only when the
+ * next non-whitespace character is a structural token (`:`, `,`, `}`, `]`)
+ * or end-of-input. Any other `"` is an unescaped inner quote → escape it.
+ */
+function fixUnescapedQuotes(text: string): string {
+  let result = "";
+  let inString = false;
+  let i = 0;
+
+  while (i < text.length) {
+    const ch = text[i];
+
+    if (inString) {
+      if (ch === "\\") {
+        // Escape sequence — copy both chars verbatim
+        result += ch + (text[i + 1] ?? "");
+        i += 2;
+        continue;
+      } else if (ch === '"') {
+        // Look ahead past whitespace to decide if this is a closing quote
+        let j = i + 1;
+        while (j < text.length && /\s/.test(text[j])) j++;
+        const next = text[j];
+        const isClosing =
+          next === ":" ||
+          next === "," ||
+          next === "}" ||
+          next === "]" ||
+          j >= text.length;
+
+        if (isClosing) {
+          inString = false;
+          result += '"';
+        } else {
+          // Unescaped inner quote — escape it
+          result += '\\"';
+        }
+      } else {
+        result += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inString = true;
+        result += '"';
+      } else {
+        result += ch;
+      }
+    }
+
+    i++;
+  }
+
+  return result;
+}
+
+/**
+ * Run all auto-fix strategies in sequence.
+ * Add new fixers here as one-liners — each receives and returns the full text.
+ */
+function autoFixJson(text: string): string {
+  let result = text;
+  result = fixUnescapedQuotes(result);
+  // result = fixTrailingCommas(result);   // ← add future fixers here
+  return result;
+}
+
+// ── Error location ─────────────────────────────────────────────────────────
 
 interface ErrorLocation {
   line: number;
@@ -76,6 +152,7 @@ export function useJsonValidation(
   const [errorCol, setErrorCol] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [itemCount, setItemCount] = useState<number | null>(null);
+  const [correctedText, setCorrectedText] = useState<string | null>(null);
   const errorCharPosRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -88,6 +165,7 @@ export function useJsonValidation(
       setErrorCol(null);
       setErrorMessage(null);
       setItemCount(null);
+      setCorrectedText(null);
       errorCharPosRef.current = null;
       return;
     }
@@ -101,9 +179,31 @@ export function useJsonValidation(
         setErrorCol(null);
         setErrorMessage(null);
         setItemCount(count);
+        setCorrectedText(null);
         errorCharPosRef.current = null;
       } catch (err) {
         if (!(err instanceof SyntaxError)) return;
+
+        // ── Auto-fix attempt ──────────────────────────────────────────────
+        const fixed = autoFixJson(text);
+        if (fixed !== text) {
+          try {
+            const parsedFixed = JSON.parse(fixed);
+            const count = countItems(parsedFixed, mode);
+            setStatus("valid");
+            setErrorLine(null);
+            setErrorCol(null);
+            setErrorMessage(null);
+            setItemCount(count);
+            setCorrectedText(fixed);
+            errorCharPosRef.current = null;
+            return;
+          } catch {
+            // Fixed text still invalid — fall through to normal error path
+          }
+        }
+
+        // ── Normal invalid path ───────────────────────────────────────────
         const loc = extractErrorLocation(text, err);
         setStatus("invalid");
         setErrorLine(loc?.line ?? null);
@@ -115,6 +215,7 @@ export function useJsonValidation(
           .replace(/\s*in JSON\s*/i, "");
         setErrorMessage(raw);
         setItemCount(null);
+        setCorrectedText(null);
         errorCharPosRef.current = loc?.charPos ?? null;
       }
     }, debounceMs);
@@ -140,5 +241,5 @@ export function useJsonValidation(
     textareaEl.scrollTop = Math.max(0, (lines.length - 3) * lineHeight);
   }, []);
 
-  return { status, errorLine, errorCol, errorMessage, itemCount, jumpToError };
+  return { status, errorLine, errorCol, errorMessage, itemCount, correctedText, jumpToError };
 }
