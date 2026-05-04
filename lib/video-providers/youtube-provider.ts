@@ -9,6 +9,7 @@ declare global {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 declare namespace YT {
   enum PlayerState {
     UNSTARTED = -1,
@@ -115,6 +116,9 @@ export class YouTubeProvider implements VideoProvider {
           playsinline: 1,
           rel: 0,
           modestbranding: 1,
+          controls: 0,
+          disablekb: 1,
+          iv_load_policy: 3,
         },
         events: {
           onReady: () => {
