@@ -1,4 +1,4 @@
-import { forwardRef, memo } from "react";
+import { forwardRef, memo, Fragment } from "react";
 import { formatTime, stripPunctuation } from "@/lib/utils/format";
 import { Play } from "lucide-react";
 import type { TranscriptSegment, CcSelection, DragState } from "@/types/transcript";
@@ -35,6 +35,8 @@ interface TranscriptSegmentProps {
    */
   definitionPositionMap?: Map<string, VocabularyExplanation>;
   onDefinitionClick?: (cleanWord: string, x: number, y: number) => void;
+  /** posKey → currently selected text (may be a sub-word after cycle). */
+  selectedTextMap?: Map<string, string>;
 }
 
 /** Highlights matching text within a segment for the search query. */
@@ -59,11 +61,46 @@ function HighlightedText({ text, query }: { text: string; query?: string }) {
   );
 }
 
+/**
+ * Renders a hyphenated token with per-part highlighting.
+ * Selected sub-parts get the indigo background; un-selected parts are dimmed.
+ * No click handlers on sub-spans — clicks bubble to the outer word span as normal,
+ * and `handleDragEnd` cycles the selection state on each tap.
+ */
+function renderHyphenatedToken(token: string, selectedText: string): React.ReactNode {
+  const parts = token.split("-");
+  const selectedParts = new Set(
+    selectedText.split("-").map((p) => stripPunctuation(p).toLowerCase())
+  );
+  return (
+    <>
+      {parts.map((part, pi) => {
+        const inSel = selectedParts.has(stripPunctuation(part).toLowerCase());
+        return (
+          <Fragment key={pi}>
+            <span
+              className={
+                inSel
+                  ? "bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100 rounded px-0.5"
+                  : "opacity-40"
+              }
+            >
+              {part}
+            </span>
+            {pi < parts.length - 1 && "-"}
+          </Fragment>
+        );
+      })}
+    </>
+  );
+}
+
 /** Splits text into word tokens for position-based selection and drag-to-select. */
 function WordClickableText({
   text,
   segmentIndex,
   selectedPositionKeys,
+  selectedTextMap,
   dragState,
   onDragStart,
   onDragEnter,
@@ -75,6 +112,7 @@ function WordClickableText({
   text: string;
   segmentIndex: number;
   selectedPositionKeys?: Set<string>;
+  selectedTextMap?: Map<string, string>;
   dragState?: DragState | null;
   onDragStart?: (segIdx: number, wordIdx: number) => void;
   onDragEnter?: (segIdx: number, wordIdx: number) => void;
@@ -143,6 +181,15 @@ function WordClickableText({
         const posKey = `${segmentIndex}-${currentWordIdx}`;
         const isSelected = selectedPositionKeys?.has(posKey) ?? false;
 
+        // Partial selection: hyphenated token is selected but only a sub-part is active.
+        // (After clicking once → `selectedText` shrinks to "known" or "well", not full token.)
+        const selectedText = selectedTextMap?.get(posKey);
+        const isPartiallySelected =
+          isSelected &&
+          token.includes("-") &&
+          selectedText !== undefined &&
+          selectedText.toLowerCase() !== stripPunctuation(token).toLowerCase();
+
         // Drag-preview highlight: same segment, within drag range
         const isInDrag =
           dragState != null &&
@@ -150,7 +197,9 @@ function WordClickableText({
           currentWordIdx >= Math.min(dragState.startIdx, dragState.currentIdx) &&
           currentWordIdx <= Math.max(dragState.startIdx, dragState.currentIdx);
 
-        const highlighted = isSelected || isInDrag;
+        // Outer span shows the full bg only when the whole token is selected.
+        // For partial selection, sub-spans paint themselves.
+        const highlighted = (isSelected && !isPartiallySelected) || isInDrag;
 
         const defForWord = defAtWordIdx.get(currentWordIdx);
         const hasDef = defForWord != null;
@@ -195,7 +244,9 @@ function WordClickableText({
                 : ""
             }`}
           >
-            {token}
+            {isPartiallySelected && selectedText
+              ? renderHyphenatedToken(token, selectedText)
+              : token}
           </span>
         );
       })}
@@ -215,6 +266,7 @@ export const TranscriptSegmentRow = memo(
         searchQuery,
         wordClickMode,
         selectedPositionKeys,
+        selectedTextMap,
         dragState,
         onDragStart,
         onDragEnter,
@@ -290,6 +342,7 @@ export const TranscriptSegmentRow = memo(
                 text={segment.text}
                 segmentIndex={index}
                 selectedPositionKeys={selectedPositionKeys}
+                selectedTextMap={selectedTextMap}
                 dragState={dragState}
                 onDragStart={onDragStart}
                 onDragEnter={onDragEnter}

@@ -23,6 +23,8 @@ interface TranscriptPanelProps {
   wordClickMode?: boolean;
   /** Position keys "segIdx-wordIdx" for highlighting selected instances only. */
   selectedPositionKeys?: Set<string>;
+  /** posKey → current selected text (may be a sub-word after cycle). */
+  selectedTextMap?: Map<string, string>;
   /** Number of CcSelection entries (may differ from selectedPositionKeys.size for phrases). */
   selectionCount?: number;
   /** Saved vocabulary definitions — used to show definition popover on click. */
@@ -49,6 +51,7 @@ export function TranscriptPanel({
   errorMessage,
   wordClickMode = false,
   selectedPositionKeys,
+  selectedTextMap,
   selectionCount = 0,
   definitions = {},
   definitionPositionMap,
@@ -244,6 +247,7 @@ export function TranscriptPanel({
                   searchQuery={searchQuery}
                   wordClickMode={wordClickMode}
                   selectedPositionKeys={selectedPositionKeys}
+                  selectedTextMap={selectedTextMap}
                   definitionKeyMap={definitionPositionMap ? undefined : definitionKeyMap}
                   definitionPositionMap={definitionPositionMap}
                   onDefinitionClick={handleDefinitionClick}

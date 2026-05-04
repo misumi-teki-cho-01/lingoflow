@@ -115,6 +115,18 @@ export function StudyRoom({
     return keys;
   }, [ccSelections]);
 
+  // Derived: posKey → current selected text. May be a sub-word of the original
+  // token after cycling (e.g. "known" when the user has clicked "well-known" twice).
+  const selectedTextMap = useMemo(() => {
+    const map = new Map<string, string>();
+    ccSelections.forEach((sel) => {
+      for (let i = sel.startWordIndex; i <= sel.endWordIndex; i++) {
+        map.set(`${sel.segmentIndex}-${i}`, sel.text);
+      }
+    });
+    return map;
+  }, [ccSelections]);
+
   // ── CC selection persistence ──────────────────────────────────────────────
   const CC_STORAGE_KEY = `cc-selections-${videoId}`;
 
@@ -293,6 +305,25 @@ export function StudyRoom({
       );
       // Allow deselecting (removing) even if the word has a definition
       if (overlaps.length > 0) {
+        // For a single-word selection on a 2-part hyphenated token, cycle
+        // through {both} → {second} → {first} → {none} instead of removing.
+        if (overlaps.length === 1 && minIdx === maxIdx) {
+          const sel = overlaps[0];
+          const originalToken = stripPunctuation(nonWhitespaceTokens[minIdx]);
+          const parts = originalToken.split("-");
+          if (parts.length === 2) {
+            const [first, second] = parts;
+            const cur = sel.text.toLowerCase();
+            let next: string | null = null;
+            if (cur === originalToken.toLowerCase()) next = second;
+            else if (cur === second.toLowerCase()) next = first;
+            // else: cur === first → next stays null → remove
+            if (next === null) {
+              return prevSels.filter((s) => s !== sel);
+            }
+            return prevSels.map((s) => (s === sel ? { ...s, text: next as string } : s));
+          }
+        }
         return prevSels.filter((s) => !overlaps.includes(s));
       }
       // Don't add to the explanation queue if this phrase already has a saved definition
@@ -614,6 +645,7 @@ export function StudyRoom({
               errorMessage={transcriptError}
               wordClickMode
               selectedPositionKeys={selectedPositionKeys}
+              selectedTextMap={selectedTextMap}
               selectionCount={ccSelections.length}
               definitions={definitions}
               definitionPositionMap={definitionPositionMap}
