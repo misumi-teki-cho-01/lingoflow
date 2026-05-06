@@ -1,5 +1,6 @@
 import { getDbAccess } from "@/lib/supabase/access";
 import type { VocabularyExplanation } from "@/lib/ai/services";
+import type { CcSelection } from "@/types/transcript";
 
 export async function getSavedVocabularyForTranscript(
   transcriptId: string
@@ -38,13 +39,66 @@ export async function getSavedVocabularyForTranscript(
   return definitions;
 }
 
+export async function getSavedCcSelectionsForTranscript(
+  transcriptId: string
+): Promise<CcSelection[]> {
+  const access = await getDbAccess();
+  if (!access?.userId) return [];
+
+  const { db, userId } = access;
+  const { data, error } = await db
+    .from("user_annotations")
+    .select("selected_text, segment_index, start_word_index, end_word_index, source_mode")
+    .eq("user_id", userId)
+    .eq("transcript_id", transcriptId)
+    .eq("source_mode", "cc")
+    .not("segment_index", "is", null)
+    .not("start_word_index", "is", null)
+    .not("end_word_index", "is", null)
+    .order("segment_index", { ascending: true })
+    .order("start_word_index", { ascending: true });
+
+  if (error || !data) {
+    console.error("[DB: Vocabulary] Failed to fetch saved CC selections:", error);
+    return [];
+  }
+
+  const selections = new Map<string, CcSelection>();
+  for (const row of data) {
+    if (
+      row.selected_text == null ||
+      row.segment_index == null ||
+      row.start_word_index == null ||
+      row.end_word_index == null
+    ) {
+      continue;
+    }
+
+    const id =
+      row.start_word_index === row.end_word_index
+        ? `${row.segment_index}-${row.start_word_index}`
+        : `${row.segment_index}-${row.start_word_index}-${row.end_word_index}`;
+
+    selections.set(id, {
+      id,
+      segmentIndex: row.segment_index,
+      startWordIndex: row.start_word_index,
+      endWordIndex: row.end_word_index,
+      text: row.selected_text,
+    });
+  }
+
+  return Array.from(selections.values());
+}
+
 /**
  * Saves the vocabulary definitions extracted by the AI and links them to the transcript as user_annotations.
  */
 export async function saveVocabularyAndAnnotations(
   videoExtId: string,
   definitions: Record<string, VocabularyExplanation>,
-  sourceMode: "cc" | "scribe" = "scribe"
+  sourceMode: "cc" | "scribe" = "scribe",
+  ccSelections: CcSelection[] = []
 ) {
   const definitionEntries = Object.values(definitions);
   if (definitionEntries.length === 0) return;
@@ -107,7 +161,52 @@ export async function saveVocabularyAndAnnotations(
       vocabResult.map(v => [v.canonical_form, v.id])
     );
 
-    const annotationInserts = definitionEntries.map(def => ({
+    const definitionByText = new Map<string, VocabularyExplanation>();
+    definitionEntries.forEach((def) => {
+      definitionByText.set(def.original_text.trim(), def);
+      definitionByText.set(def.original_text.trim().toLowerCase(), def);
+    });
+
+    if (sourceMode === "cc" && ccSelections.length > 0) {
+      const ccInserts = ccSelections.map((sel) => {
+        const def =
+          definitionByText.get(sel.text.trim()) ??
+          definitionByText.get(sel.text.trim().toLowerCase());
+        return {
+          user_id: activeUserId,
+          transcript_id: transcriptId,
+          vocabulary_id: def ? (vocabIdByCanonicalForm.get(def.canonical_form.trim()) ?? null) : null,
+          selected_text: sel.text,
+          segment_index: sel.segmentIndex,
+          start_word_index: sel.startWordIndex,
+          end_word_index: sel.endWordIndex,
+          annotation_type: "note",
+          source_mode: sourceMode,
+        };
+      });
+
+      // Replace existing rows at the same positions to avoid duplicates
+      for (const row of ccInserts) {
+        const { error: deleteErr } = await db
+          .from("user_annotations")
+          .delete()
+          .eq("user_id", activeUserId)
+          .eq("transcript_id", transcriptId)
+          .eq("source_mode", "cc")
+          .eq("segment_index", row.segment_index)
+          .eq("start_word_index", row.start_word_index)
+          .eq("end_word_index", row.end_word_index);
+        if (deleteErr) console.error("[DB: Annotations] Failed to replace CC annotation:", deleteErr);
+      }
+
+      const { error: annoErr } = await db.from("user_annotations").insert(ccInserts);
+      if (annoErr) {
+        console.error("[DB: Annotations] Failed to insert CC annotations:", annoErr);
+      }
+      return;
+    }
+
+    const annotationInserts = definitionEntries.map((def) => ({
       user_id: activeUserId,
       transcript_id: transcriptId,
       vocabulary_id: vocabIdByCanonicalForm.get(def.canonical_form.trim()) ?? null,
@@ -115,6 +214,8 @@ export async function saveVocabularyAndAnnotations(
       annotation_type: "note",
       source_mode: sourceMode,
     }));
+
+    if (annotationInserts.length === 0) return;
 
     const { error: annoErr } = await db
       .from("user_annotations")

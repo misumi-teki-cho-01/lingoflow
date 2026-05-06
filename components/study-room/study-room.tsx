@@ -49,6 +49,7 @@ export interface StudyRoomProps {
   videoUrl: string;
   segments: TranscriptSegment[];
   initialDefinitions?: Record<string, VocabularyExplanation>;
+  initialCcSelections?: CcSelection[];
   initialDictationHtml?: string | null;
   transcriptSource?: TranscriptSource;
   transcriptError?: string;
@@ -74,6 +75,7 @@ export function StudyRoom({
   videoUrl,
   segments: initialSegments,
   initialDefinitions = {},
+  initialCcSelections = [],
   initialDictationHtml = null,
   transcriptSource,
   transcriptError,
@@ -102,10 +104,11 @@ export function StudyRoom({
 
   // CC mode — position-based selections + drag state
   const [ccSelections, setCcSelections] = useState<CcSelection[]>([]);
+  const [persistedCcSelections, setPersistedCcSelections] = useState<CcSelection[]>(initialCcSelections);
   const [dragState, setDragState] = useState<DragState | null>(null);
 
   // Derived: set of "segIdx-wordIdx" keys for fast per-instance highlight lookup
-  const selectedPositionKeys = useMemo(() => {
+  const draftSelectedPositionKeys = useMemo(() => {
     const keys = new Set<string>();
     ccSelections.forEach((sel) => {
       for (let i = sel.startWordIndex; i <= sel.endWordIndex; i++) {
@@ -117,7 +120,7 @@ export function StudyRoom({
 
   // Derived: posKey → current selected text. May be a sub-word of the original
   // token after cycling (e.g. "known" when the user has clicked "well-known" twice).
-  const selectedTextMap = useMemo(() => {
+  const draftSelectedTextMap = useMemo(() => {
     const map = new Map<string, string>();
     ccSelections.forEach((sel) => {
       for (let i = sel.startWordIndex; i <= sel.endWordIndex; i++) {
@@ -130,16 +133,16 @@ export function StudyRoom({
   // ── CC selection persistence ──────────────────────────────────────────────
   const CC_STORAGE_KEY = `cc-selections-${videoId}`;
 
-  // Load saved selections on mount
+  // Load saved selections on mount.
+  // localStorage takes priority; if empty, persistedCcSelections (from DB) fills the display.
   useEffect(() => {
     try {
       const saved = localStorage.getItem(CC_STORAGE_KEY);
       if (saved) setCcSelections(JSON.parse(saved));
     } catch { /* ignore corrupt data */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [CC_STORAGE_KEY]);
 
-  // Save on every change (debounced 500 ms)
+  // Save draft selections on every change (debounced 500 ms).
   useEffect(() => {
     const timer = setTimeout(() => {
       localStorage.setItem(CC_STORAGE_KEY, JSON.stringify(ccSelections));
@@ -162,12 +165,12 @@ export function StudyRoom({
   } = useVocabularyReview(initialDefinitions);
 
   // Derived: position-keyed definition map — only positions explicitly marked in
-  // ccSelections that also have a saved definition get an indicator.
+  // saved or draft CC selections that also have a saved definition get an indicator.
   // This restricts definition underlines to the SPECIFIC marked occurrence rather
   // than every occurrence of the same word across the transcript.
   const definitionPositionMap = useMemo(() => {
     const map = new Map<string, VocabularyExplanation>();
-    ccSelections.forEach((sel) => {
+    [...persistedCcSelections, ...ccSelections].forEach((sel) => {
       const key = sel.text.trim().toLowerCase();
       const def = definitions[key] ?? definitions[sel.text.trim()];
       if (def) {
@@ -177,7 +180,39 @@ export function StudyRoom({
       }
     });
     return map;
-  }, [ccSelections, definitions]);
+  }, [persistedCcSelections, ccSelections, definitions]);
+
+  const persistedSelectedPositionKeys = useMemo(() => {
+    const keys = new Set<string>();
+    persistedCcSelections.forEach((sel) => {
+      for (let i = sel.startWordIndex; i <= sel.endWordIndex; i++) {
+        keys.add(`${sel.segmentIndex}-${i}`);
+      }
+    });
+    return keys;
+  }, [persistedCcSelections]);
+
+  const persistedSelectedTextMap = useMemo(() => {
+    const map = new Map<string, string>();
+    persistedCcSelections.forEach((sel) => {
+      for (let i = sel.startWordIndex; i <= sel.endWordIndex; i++) {
+        map.set(`${sel.segmentIndex}-${i}`, sel.text);
+      }
+    });
+    return map;
+  }, [persistedCcSelections]);
+
+  const displayPositionKeys = useMemo(() => {
+    const keys = new Set<string>(persistedSelectedPositionKeys);
+    draftSelectedPositionKeys.forEach((key) => keys.add(key));
+    return keys;
+  }, [persistedSelectedPositionKeys, draftSelectedPositionKeys]);
+
+  const displayTextMap = useMemo(() => {
+    const map = new Map<string, string>(persistedSelectedTextMap);
+    draftSelectedTextMap.forEach((value, key) => map.set(key, value));
+    return map;
+  }, [persistedSelectedTextMap, draftSelectedTextMap]);
 
   // ── Player ────────────────────────────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -326,11 +361,6 @@ export function StudyRoom({
         }
         return prevSels.filter((s) => !overlaps.includes(s));
       }
-      // Don't add to the explanation queue if this phrase already has a saved definition
-      const phraseKey = phrase.toLowerCase();
-      if (definitions[phraseKey] !== undefined || definitions[phrase] !== undefined) {
-        return prevSels;
-      }
       return [
         ...prevSels,
         { id, segmentIndex, startWordIndex: minIdx, endWordIndex: maxIdx, text: phrase },
@@ -357,9 +387,17 @@ export function StudyRoom({
   // ── Vocabulary review — CC ─────────────────────────────────────────────────
   const openCCVocabularyReview = useCallback(() => {
     if (ccSelections.length === 0) return;
-    const words = ccSelections.map((sel) => ({ id: sel.id, text: sel.text }));
+    // Only queue words that don't already have a saved definition for review.
+    // Words with existing definitions are still highlighted but need no new lookup.
+    const words = ccSelections
+      .filter((sel) => {
+        const key = sel.text.trim().toLowerCase();
+        return definitions[key] === undefined && definitions[sel.text.trim()] === undefined;
+      })
+      .map((sel) => ({ id: sel.id, text: sel.text }));
+    if (words.length === 0) return;
     openReview(words);
-  }, [ccSelections, openReview]);
+  }, [ccSelections, definitions, openReview]);
 
   // ── Save vocabulary — Scribe ──────────────────────────────────────────────
   const handleSaveScribeVocabulary = async (
@@ -396,9 +434,20 @@ export function StudyRoom({
     _options: { persistReviewedTranscript: boolean }
   ) => {
     const { saveVocabularyToDB } = await import("@/lib/api/ai");
-    await saveVocabularyToDB(videoId, finalData, { sourceMode: "cc" });
+    // Merge existing definitions so the server can resolve vocabulary_id
+    // for selections that already had a saved definition (and were not re-reviewed).
+    await saveVocabularyToDB(videoId, { ...definitions, ...finalData }, {
+      sourceMode: "cc",
+      ccSelections,
+    });
     setDefinitions((prev) => ({ ...prev, ...finalData }));
-    // Keep selections visible — words now show their definitions on click
+    setPersistedCcSelections((prev) => {
+      const merged = new Map<string, CcSelection>();
+      [...prev, ...ccSelections].forEach((sel) => merged.set(sel.id, sel));
+      return Array.from(merged.values());
+    });
+    setCcSelections([]);
+    localStorage.removeItem(`cc-selections-${videoId}`);
     showFeedback({ tone: "success", text: t("saveSuccess") });
     closeReview();
   };
@@ -644,8 +693,8 @@ export function StudyRoom({
               source={transcriptSource}
               errorMessage={transcriptError}
               wordClickMode
-              selectedPositionKeys={selectedPositionKeys}
-              selectedTextMap={selectedTextMap}
+              selectedPositionKeys={displayPositionKeys}
+              selectedTextMap={displayTextMap}
               selectionCount={ccSelections.length}
               definitions={definitions}
               definitionPositionMap={definitionPositionMap}
@@ -662,7 +711,7 @@ export function StudyRoom({
               activeSegmentIndex={activeSegmentIndex}
               onSegmentClick={player.seekTo}
               errorMessage={transcriptError}
-              selectedPositionKeys={selectedPositionKeys}
+              selectedPositionKeys={displayPositionKeys}
               selectionCount={ccSelections.length}
               definitions={definitions}
               definitionPositionMap={definitionPositionMap}

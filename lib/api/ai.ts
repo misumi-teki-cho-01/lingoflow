@@ -1,5 +1,6 @@
 import type { TranscriptSegment } from "@/types/transcript";
 import type { VocabularyExplanation } from "@/lib/ai/services";
+import type { CcSelection } from "@/types/transcript";
 
 export async function fetchAIExplanations(mdText: string, wordsToExplain: string[], locale: string): Promise<Record<string, VocabularyExplanation>> {
   const res = await fetch("/api/ai/explain", {
@@ -19,6 +20,7 @@ export async function saveVocabularyToDB(
   definitions: Record<string, VocabularyExplanation>,
   options?: {
     sourceMode?: "cc" | "scribe";
+    ccSelections?: CcSelection[];
     dictation?: {
       contentHtml: string;
       segments: TranscriptSegment[];
@@ -32,6 +34,7 @@ export async function saveVocabularyToDB(
       videoId,
       definitions,
       sourceMode: options?.sourceMode ?? "scribe",
+      ccSelections: options?.ccSelections ?? [],
       dictation: options?.dictation ?? null,
     })
   });

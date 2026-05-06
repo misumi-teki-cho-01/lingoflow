@@ -4,7 +4,7 @@ import { saveUserDictation } from "@/lib/db/dictations";
 
 export async function POST(request: Request) {
   try {
-    const { videoId, definitions, dictation, sourceMode } = await request.json();
+    const { videoId, definitions, ccSelections, dictation, sourceMode } = await request.json();
 
     if (!videoId || !definitions) {
       return NextResponse.json(
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       sourceMode === "cc" || sourceMode === "scribe" ? sourceMode : "scribe";
 
     if (Object.keys(definitions).length > 0) {
-      await saveVocabularyAndAnnotations(videoId, definitions, mode);
+      await saveVocabularyAndAnnotations(videoId, definitions, mode, Array.isArray(ccSelections) ? ccSelections : []);
     }
 
     if (

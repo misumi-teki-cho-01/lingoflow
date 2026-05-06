@@ -4,8 +4,8 @@ import { runTranscriptionPipeline } from "@/lib/pipeline/transcription-pipeline"
 import { fetchYouTubeMeta, type YouTubeMeta } from "@/lib/utils/youtube-meta";
 import { createClient } from "@/lib/supabase/server";
 import { getUserDictationByVideoId } from "@/lib/db/dictations";
-import { getSavedVocabularyForTranscript } from "@/lib/db/vocabulary";
-import type { TranscriptSegment } from "@/types/transcript";
+import { getSavedCcSelectionsForTranscript, getSavedVocabularyForTranscript } from "@/lib/db/vocabulary";
+import type { CcSelection, TranscriptSegment } from "@/types/transcript";
 import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
 import type { VocabularyExplanation } from "@/lib/ai/services";
 
@@ -29,6 +29,7 @@ async function getVideoFromDB(videoExtId: string): Promise<{
   video: DBVideo | null;
   transcript: DBTranscript | null;
   definitions: Record<string, VocabularyExplanation>;
+  ccSelections: CcSelection[];
   dictationHtml: string | null;
 }> {
   try {
@@ -41,7 +42,7 @@ async function getVideoFromDB(videoExtId: string): Promise<{
       .single();
 
     if (!video) {
-      return { video: null, transcript: null, definitions: {}, dictationHtml: null };
+      return { video: null, transcript: null, definitions: {}, ccSelections: [], dictationHtml: null };
     }
 
     const { data: transcript } = await supabase
@@ -55,11 +56,15 @@ async function getVideoFromDB(videoExtId: string): Promise<{
     const definitions = transcript
       ? await getSavedVocabularyForTranscript(transcript.id)
       : {};
+    const ccSelections = transcript
+      ? await getSavedCcSelectionsForTranscript(transcript.id)
+      : [];
     const dictation = await getUserDictationByVideoId(video.id, "en");
 
     return {
       video,
       definitions,
+      ccSelections,
       dictationHtml: dictation?.content_html ?? null,
       transcript: transcript
         ? {
@@ -70,7 +75,7 @@ async function getVideoFromDB(videoExtId: string): Promise<{
         : null,
     };
   } catch {
-    return { video: null, transcript: null, definitions: {}, dictationHtml: null };
+    return { video: null, transcript: null, definitions: {}, ccSelections: [], dictationHtml: null };
   }
 }
 
@@ -91,7 +96,7 @@ export default async function VideoPage({
   const videoUrl = `https://www.youtube.com/watch?v=${id}`;
 
   // ── Try DB first ───────────────────────────────────────────────────────────
-  const { video: dbVideo, transcript: dbTranscript, definitions, dictationHtml } = await getVideoFromDB(id);
+  const { video: dbVideo, transcript: dbTranscript, definitions, ccSelections, dictationHtml } = await getVideoFromDB(id);
 
   let videoMeta: YouTubeMeta;
   let segments: TranscriptSegment[];
@@ -131,6 +136,7 @@ export default async function VideoPage({
       transcriptSource={transcriptSource}
       defaultMode={defaultMode}
       initialDefinitions={definitions}
+      initialCcSelections={ccSelections}
       initialDictationHtml={dictationHtml}
     />
   );
