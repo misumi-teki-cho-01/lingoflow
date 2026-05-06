@@ -6,7 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ScrollText, Search, MousePointerClick, X, Check, Sparkles } from "lucide-react";
+import {
+  ScrollText,
+  Search,
+  MousePointerClick,
+  X,
+  Check,
+  Sparkles,
+  TriangleAlert,
+} from "lucide-react";
 import { TranscriptSegmentRow } from "./transcript-segment";
 import { DictionaryPopover } from "@/components/scribe/dictionary-popover";
 import type { TranscriptSegment, DragState } from "@/types/transcript";
@@ -63,9 +71,11 @@ export function TranscriptPanel({
   onClearWords,
 }: TranscriptPanelProps) {
   const t = useTranslations("transcript");
+  const tCommon = useTranslations("common");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Definition popover state
   const [popup, setPopup] = useState<{
@@ -166,16 +176,6 @@ export function TranscriptPanel({
           </div>
 
           <div className="flex items-center gap-1">
-            {wordClickMode && selectionCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs px-2 text-muted-foreground"
-                onClick={onClearWords}
-              >
-                {t("clearSelection")}
-              </Button>
-            )}
             <Button
               variant="ghost"
               size="icon"
@@ -191,12 +191,6 @@ export function TranscriptPanel({
             </Button>
           </div>
         </div>
-
-        {wordClickMode && (
-          <div className="mb-3 px-1 text-xs text-muted-foreground">
-            {t("wordClickHint")}
-          </div>
-        )}
 
         {/* Search bar — hidden in word click mode to keep UI focused */}
         {!wordClickMode && (
@@ -224,7 +218,7 @@ export function TranscriptPanel({
       {/* Scrollable segment list — cancel drag if pointer leaves the list */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto px-2 py-2 scroll-smooth custom-scrollbar"
+        className="flex-1 overflow-y-auto px-2 py-2 pb-24 scroll-smooth custom-scrollbar"
         onMouseUp={() => onDragEnd?.()}
         onMouseLeave={() => {
           // Cancel (don't commit) if mouse leaves the panel while dragging
@@ -267,34 +261,99 @@ export function TranscriptPanel({
         </div>
       </div>
 
-      {/* "Follow progress" floating button */}
-      {!wordClickMode && !isAutoScrollEnabled && activeSegmentIndex >= 0 && (
-        <div className="absolute bottom-4 right-4 animate-in fade-in slide-in-from-bottom-2">
-          <Button
-            size="sm"
-            onClick={() => {
-              setIsAutoScrollEnabled(true);
-              activeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-            }}
-            className="h-9 shadow-lg gap-2 rounded-full"
-          >
-            <Check className="h-3.5 w-3.5" />
-            <span>{t("followProgress")}</span>
-          </Button>
+      {(wordClickMode || (!wordClickMode && !isAutoScrollEnabled && activeSegmentIndex >= 0)) && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
+          <div className="bg-gradient-to-t from-card via-card/95 to-transparent px-3 pb-3 pt-10">
+            <div
+              className={`pointer-events-auto flex items-center gap-3 rounded-2xl border border-border/70 bg-background/95 px-3 py-2 shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 ${
+                wordClickMode ? "justify-between" : "justify-end"
+              }`}
+            >
+              {wordClickMode && (
+                <div className="min-w-0 flex-1 self-center">
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {t("wordClickHint")}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex shrink-0 items-center gap-2 self-center">
+                {wordClickMode && selectionCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-full px-3 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowClearConfirm(true)}
+                  >
+                    {t("clearSelection")}
+                  </Button>
+                )}
+
+                {wordClickMode && selectionCount > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={onExplainWords}
+                    className="h-9 gap-2 rounded-full bg-indigo-600 px-4 text-white shadow-md hover:bg-indigo-700"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>{t("explainWords", { count: selectionCount })}</span>
+                  </Button>
+                )}
+
+                {!wordClickMode && !isAutoScrollEnabled && activeSegmentIndex >= 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setIsAutoScrollEnabled(true);
+                      activeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                    className="h-9 gap-2 rounded-full px-4 shadow-md"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    <span>{t("followProgress")}</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* "Explain N words" floating button */}
-      {wordClickMode && selectionCount > 0 && (
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4 animate-in fade-in slide-in-from-bottom-2 z-10">
-          <Button
-            size="sm"
-            onClick={onExplainWords}
-            className="h-9 shadow-lg gap-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            {t("explainWords", { count: selectionCount })}
-          </Button>
+      {showClearConfirm && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-amber-500/10 p-2 text-amber-600">
+                <TriangleAlert className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-semibold">{t("clearSelectionConfirmTitle")}</h4>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("clearSelectionConfirmBody", { count: selectionCount })}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setShowClearConfirm(false)}
+                className="rounded-full"
+              >
+                {tCommon("cancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  onClearWords?.();
+                  setShowClearConfirm(false);
+                }}
+                className="rounded-full"
+              >
+                {tCommon("confirm")}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

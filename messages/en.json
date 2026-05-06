@@ -184,6 +184,8 @@
     "explainWords": "Explain {count} words",
     "clearSelection": "Clear",
     "wordClickHint": "Click words to add them to your vocabulary list",
+    "clearSelectionConfirmTitle": "Clear selection?",
+    "clearSelectionConfirmBody": "This will remove {count} selected words from the current selection.",
     "sourceEnhanced": "AI Enhanced",
     "sourceRaw": "Raw Subtitles",
     "sourceAudio": "AI Transcribed",

@@ -184,6 +184,8 @@
     "explainWords": "{count}語を解説",
     "clearSelection": "クリア",
     "wordClickHint": "単語をクリックして語彙リストに追加",
+    "clearSelectionConfirmTitle": "選択をクリアしますか？",
+    "clearSelectionConfirmBody": "現在の選択から {count} 個の単語を削除します。",
     "sourceEnhanced": "AI強化",
     "sourceRaw": "原字幕",
     "sourceAudio": "AI文字起こし",

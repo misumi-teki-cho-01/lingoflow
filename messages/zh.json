@@ -184,6 +184,8 @@
     "explainWords": "解释 {count} 个词",
     "clearSelection": "清除选择",
     "wordClickHint": "点击单词将其加入释义列表",
+    "clearSelectionConfirmTitle": "确认清除选择？",
+    "clearSelectionConfirmBody": "这会从当前选择中移除 {count} 个单词。",
     "sourceEnhanced": "AI 增强",
     "sourceRaw": "原始字幕",
     "sourceAudio": "AI 转录",
