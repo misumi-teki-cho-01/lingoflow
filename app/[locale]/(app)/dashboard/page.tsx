@@ -27,11 +27,6 @@ export default async function DashboardPage({
     <div className="mx-auto max-w-5xl px-4 py-12 flex flex-col gap-16">
       {/* ── Import Hero ── */}
       <section className="flex flex-col items-center text-center gap-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="mt-2 text-muted-foreground">{t('subtitle')}</p>
-        </div>
-
         <VideoImportForm />
 
         {/* No-subtitle error notice (redirected back from video page) */}

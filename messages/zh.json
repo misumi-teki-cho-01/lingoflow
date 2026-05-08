@@ -46,8 +46,6 @@
     }
   },
   "dashboard": {
-    "title": "共享视频库",
-    "subtitle": "所有用户共用同一个视频和字幕库，粘贴 YouTube 链接即可开始学习",
     "importVideo": "导入视频",
     "urlPlaceholder": "粘贴 YouTube 或 Bilibili 链接...",
     "recentImports": "共享视频库",
@@ -65,7 +63,7 @@
       "youtube": "YouTube",
       "bilibili": "Bilibili"
     },
-    "allChannels": "全部",
+    "allChannels": "全部频道",
     "channelGroup": "{name} · {count} 个视频",
     "noSearchResults": "没有找到匹配的视频",
     "viewGrid": "网格视图",

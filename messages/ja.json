@@ -46,8 +46,6 @@
     }
   },
   "dashboard": {
-    "title": "共有動画ライブラリ",
-    "subtitle": "すべてのユーザーで同じ動画・字幕ライブラリを共有します。YouTubeリンクを貼り付けて学習を始めましょう",
     "importVideo": "動画をインポート",
     "urlPlaceholder": "YouTubeまたはBilibiliのリンクを貼り付け...",
     "recentImports": "共有ライブラリ",
@@ -60,7 +58,12 @@
     "errorBilibiliUnsupported": "Bilibiliサポートは待機中です。YouTubeリンクを使用してください。",
     "errorSaveFailed": "動画の保存に失敗しました。御再試ください。",
     "searchPlaceholder": "動画を検索...",
-    "allChannels": "すべて",
+    "allSources": "すべてのソース",
+    "source": {
+      "youtube": "YouTube",
+      "bilibili": "Bilibili"
+    },
+    "allChannels": "すべてのチャンネル",
     "channelGroup": "{name} · {count} 本",
     "noSearchResults": "一致する動画なし",
     "viewGrid": "グリッド表示",

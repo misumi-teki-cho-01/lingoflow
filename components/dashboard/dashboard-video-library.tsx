@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search, LayoutGrid, List, Play, Tv2, Loader2 } from 'lucide-react';
 import { VideoCard, type VideoCardData } from '@/components/video/video-card';
@@ -24,12 +24,16 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   const [hasEverLoadedMore, setHasEverLoadedMore] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'channels'>(() => {
-    if (typeof window === 'undefined') return 'grid';
+  const [viewMode, setViewMode] = useState<'grid' | 'channels'>('grid');
+
+  useEffect(() => {
     const saved = localStorage.getItem('dashboard-view-mode');
-    return saved === 'grid' || saved === 'channels' ? saved : 'grid';
-  });
+    if (saved === 'grid' || saved === 'channels') {
+      setViewMode(saved);
+    }
+  }, []);
 
   const handleViewMode = (mode: 'grid' | 'channels') => {
     setViewMode(mode);
@@ -60,9 +64,23 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
       .map(([name, count]) => ({ name, count }));
   }, [allVideos]);
 
+  const sources = useMemo(() => {
+    const counts = new Map<string, number>();
+    allVideos.forEach((v) => {
+      counts.set(v.source_type, (counts.get(v.source_type) ?? 0) + 1);
+    });
+
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
+  }, [allVideos]);
+
   // Filtered videos
   const filteredVideos = useMemo(() => {
     let result = allVideos;
+    if (selectedSource) {
+      result = result.filter((v) => v.source_type === selectedSource);
+    }
     if (selectedChannel) {
       result = result.filter((v) => (v.channel_name ?? '—') === selectedChannel);
     }
@@ -73,7 +91,7 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
       );
     }
     return result;
-  }, [allVideos, selectedChannel, searchQuery]);
+  }, [allVideos, selectedSource, selectedChannel, searchQuery]);
 
   // Grouped by channel (for channels view)
   const groupedByChannel = useMemo(() => {
@@ -96,7 +114,7 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   // "Load more" footer: show only when not actively filtering/searching
   // (search/channel filter work on loaded data — loading more only makes sense
   // when browsing all videos)
-  const isFiltering = !!selectedChannel || searchQuery.trim() !== '';
+  const isFiltering = !!selectedSource || !!selectedChannel || searchQuery.trim() !== '';
 
   return (
     <section>
@@ -157,6 +175,54 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
               </button>
             </div>
           </div>
+
+          {/* ── Source Pills ── */}
+          {sources.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              <button
+                onClick={() => setSelectedSource(null)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  selectedSource === null
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground bg-background'
+                }`}
+              >
+                {t('allSources')}
+                <span
+                  className={`inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold ${
+                    selectedSource === null
+                      ? 'bg-primary-foreground/20 text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {allVideos.length}
+                </span>
+              </button>
+
+              {sources.map(({ name, count }) => (
+                <button
+                  key={name}
+                  onClick={() => setSelectedSource((prev) => (prev === name ? null : name))}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    selectedSource === name
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground bg-background'
+                  }`}
+                >
+                  <span>{t(`source.${name}`)}</span>
+                  <span
+                    className={`inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold ${
+                      selectedSource === name
+                        ? 'bg-primary-foreground/20 text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* ── Channel Pills ── */}
           {channels.length > 1 && (

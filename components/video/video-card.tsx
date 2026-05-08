@@ -5,7 +5,7 @@ import { Play, Clock } from 'lucide-react';
 import { formatTime } from '@/lib/utils/format';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN, ja, enUS, type Locale } from 'date-fns/locale';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 export interface VideoCardData {
   video_ext_id: string;
@@ -27,12 +27,18 @@ interface VideoCardProps {
   video: VideoCardData;
 }
 
+const SOURCE_BADGE_STYLES: Record<string, string> = {
+  youtube: 'bg-red-100 text-muted-foreground',
+  bilibili: 'bg-sky-100 text-muted-foreground',
+};
+
 /**
  * Reusable video card — links to /video/{video_ext_id}.
- * Displays thumbnail, title, channel name, duration badge, and relative import time.
+ * Displays thumbnail, title, duration badge, and compact metadata.
  */
 export function VideoCard({ video }: VideoCardProps) {
   const locale = useLocale();
+  const t = useTranslations('dashboard');
   const thumbnail =
     video.thumbnail_url ?? `https://img.youtube.com/vi/${video.video_ext_id}/hqdefault.jpg`;
 
@@ -73,14 +79,30 @@ export function VideoCard({ video }: VideoCardProps) {
       </div>
 
       {/* Info */}
-      <div className="flex flex-col gap-1 p-3">
+      <div className="flex flex-1 flex-col gap-2 p-3">
         <p className="text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
           {video.title ?? video.video_ext_id}
         </p>
-        {video.channel_name && (
-          <p className="text-xs text-muted-foreground truncate">{video.channel_name}</p>
-        )}
-        <p className="text-[10px] text-muted-foreground/50">{relativeTime}</p>
+        <div className="mt-auto flex items-end justify-between gap-2">
+          <p suppressHydrationWarning className="text-[10px] text-muted-foreground/50">
+            {relativeTime}
+          </p>
+
+          <div className="flex max-w-[70%] min-w-0 items-center justify-end gap-1.5">
+            {video.channel_name && (
+              <span className="min-w-0 truncate rounded-full bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                {video.channel_name}
+              </span>
+            )}
+            <span
+              className={`shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-medium ${
+                SOURCE_BADGE_STYLES[video.source_type] ?? 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {t(`source.${video.source_type}`)}
+            </span>
+          </div>
+        </div>
       </div>
     </Link>
   );
