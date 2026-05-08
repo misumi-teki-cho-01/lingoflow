@@ -24,7 +24,8 @@ export function LocaleSwitcher() {
     <select
       value={locale}
       onChange={handleChange}
-      className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+      aria-label="Select language"
+      className="h-7 rounded-full border border-transparent bg-transparent px-2.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground focus:outline-none"
     >
       {locales.map((loc) => (
         <option key={loc} value={loc}>
