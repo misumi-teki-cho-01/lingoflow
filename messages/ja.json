@@ -9,8 +9,7 @@
     "back": "戻る"
   },
   "nav": {
-    "dashboard": "マイ動画",
-    "settings": "設定",
+    "dashboard": "共有ライブラリ",
     "login": "ログイン",
     "signup": "新規登録",
     "logout": "ログアウト"
@@ -47,13 +46,13 @@
     }
   },
   "dashboard": {
-    "title": "動画ライブラリ",
-    "subtitle": "YouTubeリンクを貼り付けて学びを始めましょう",
+    "title": "共有動画ライブラリ",
+    "subtitle": "すべてのユーザーで同じ動画・字幕ライブラリを共有します。YouTubeリンクを貼り付けて学習を始めましょう",
     "importVideo": "動画をインポート",
     "urlPlaceholder": "YouTubeまたはBilibiliのリンクを貼り付け...",
-    "recentImports": "最近のインポート",
+    "recentImports": "共有ライブラリ",
     "noVideos": "まだ動画がインポートされていません",
-    "noVideosHint": "リンクを貼り付けて最初の動画をインポート",
+    "noVideosHint": "リンクを貼り付けて、最初の動画を共有ライブラリに追加",
     "importing": "インポート中...",
     "importingHint": "字幕を取得中です。数秒かかる場合があります...",
     "errorNoSubtitles": "この動画に字幕がありません。別の動画をお試しください。",

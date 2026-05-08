@@ -20,12 +20,6 @@ export function Header() {
           >
             {t('dashboard')}
           </Link>
-          <Link
-            href="/settings"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t('settings')}
-          </Link>
           <LogoutButton />
           <LocaleSwitcher />
         </nav>

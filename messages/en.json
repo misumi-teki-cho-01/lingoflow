@@ -9,8 +9,7 @@
     "back": "Back"
   },
   "nav": {
-    "dashboard": "My Videos",
-    "settings": "Settings",
+    "dashboard": "Shared Library",
     "login": "Log in",
     "signup": "Sign up",
     "logout": "Log out"
@@ -47,13 +46,13 @@
     }
   },
   "dashboard": {
-    "title": "Video Library",
-    "subtitle": "Paste a YouTube link to start learning",
+    "title": "Shared Video Library",
+    "subtitle": "All users share the same video and subtitle library. Paste a YouTube link to start learning.",
     "importVideo": "Import Video",
     "urlPlaceholder": "Paste a YouTube or Bilibili link...",
-    "recentImports": "Recently Imported",
+    "recentImports": "Shared Library",
     "noVideos": "No videos imported yet",
-    "noVideosHint": "Paste a link to import your first video",
+    "noVideosHint": "Paste a link to add the first video to the shared library",
     "importing": "Importing...",
     "importingHint": "Fetching subtitles, this may take a few seconds...",
     "errorNoSubtitles": "No subtitles available for this video. Try another one.",
