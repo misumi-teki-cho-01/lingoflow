@@ -27,11 +27,8 @@ export async function middleware(request: NextRequest) {
   // Refresh Supabase session and get current user
   const { user } = await updateSession(request, intlResponse);
 
-  // Dev bypass: set DEV_SUPABASE_USER_ID in .env.local to skip auth checks
-  const devBypass = process.env.DEV_SUPABASE_USER_ID?.trim();
-
   // Redirect unauthenticated users away from protected routes
-  if (isProtected && !user && !devBypass) {
+  if (isProtected && !user) {
     return NextResponse.redirect(new URL(`/${locale}/`, request.url));
   }
 

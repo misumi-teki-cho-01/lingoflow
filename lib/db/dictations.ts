@@ -49,10 +49,7 @@ export async function getUserDictationByVideoId(
 export async function saveUserDictation(input: SaveUserDictationInput): Promise<void> {
   const access = await getDbAccess();
   if (!access?.userId) {
-    console.warn(
-      '[DB: Dictation] Skipping save because there is no authenticated user. ' +
-        'Set DEV_SUPABASE_USER_ID and SUPABASE_SERVICE_ROLE_KEY for development-only persistence.',
-    );
+    console.warn('[DB: Dictation] Skipping save because there is no authenticated user.');
     return;
   }
 

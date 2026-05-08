@@ -104,10 +104,7 @@ export async function saveVocabularyAndAnnotations(
   try {
     const access = await getDbAccess();
     if (!access?.userId) {
-      console.warn(
-        '[DB: Vocabulary] Skipping save because there is no authenticated user. ' +
-          'Set DEV_SUPABASE_USER_ID and SUPABASE_SERVICE_ROLE_KEY for development-only persistence.',
-      );
+      console.warn('[DB: Vocabulary] Skipping save because there is no authenticated user.');
       return;
     }
     const { db, userId: activeUserId } = access;
