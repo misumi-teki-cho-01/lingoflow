@@ -79,7 +79,7 @@ export function StudyRoom({
   initialDictationHtml = null,
   transcriptSource,
   transcriptError,
-  defaultMode = "scribe",
+  defaultMode = "cc",
 }: StudyRoomProps) {
   const t = useTranslations("studyRoom");
   const locale = useLocale();
@@ -410,9 +410,9 @@ export function StudyRoom({
       sourceMode: "scribe",
       dictation: options.persistReviewedTranscript
         ? {
-            contentHtml: editorRef.current?.getHtml() ?? "",
-            segments: editorRef.current?.getTranscriptSegments() ?? [],
-          }
+          contentHtml: editorRef.current?.getHtml() ?? "",
+          segments: editorRef.current?.getTranscriptSegments() ?? [],
+        }
         : undefined,
     });
 
@@ -584,13 +584,12 @@ export function StudyRoom({
       {feedback && (
         <div className="px-4 pt-3 shrink-0">
           <div
-            className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${
-              feedback.tone === "success"
+            className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${feedback.tone === "success"
                 ? "border-emerald-300/70 bg-emerald-50 text-emerald-700"
                 : feedback.tone === "error"
                   ? "border-red-300/70 bg-red-50 text-red-700"
                   : "border-sky-300/70 bg-sky-50 text-sky-700"
-            }`}
+              }`}
           >
             {feedback.tone === "success" ? (
               <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />

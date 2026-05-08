@@ -92,7 +92,7 @@ export default async function VideoPage({
 
   if (!YT_ID_RE.test(id)) notFound();
 
-  const defaultMode: StudyMode = mode === "cc" ? "cc" : "scribe";
+  const defaultMode: StudyMode = mode === "scribe" ? "scribe" : "cc";
   const videoUrl = `https://www.youtube.com/watch?v=${id}`;
 
   // ── Try DB first ───────────────────────────────────────────────────────────
