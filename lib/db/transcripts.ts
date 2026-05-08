@@ -1,19 +1,19 @@
-import { createClient } from "@/lib/supabase/server";
-import type { TranscriptSegment } from "@/types/transcript";
-import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
+import { createClient } from '@/lib/supabase/server';
+import type { TranscriptSegment } from '@/types/transcript';
+import type { TranscriptSource } from '@/lib/pipeline/transcription-pipeline';
 
 // Only these quality levels are worth caching
 const CACHEABLE_QUALITIES: TranscriptSource[] = [
-  "subtitle-raw",
-  "subtitle-enhanced",
-  "audio-transcribed",
+  'subtitle-raw',
+  'subtitle-enhanced',
+  'audio-transcribed',
 ];
 
 // Quality priority: higher index = better quality
 const QUALITY_RANK: Record<string, number> = {
-  "subtitle-raw": 0,
-  "audio-transcribed": 1,
-  "subtitle-enhanced": 2,
+  'subtitle-raw': 0,
+  'audio-transcribed': 1,
+  'subtitle-enhanced': 2,
 };
 
 export interface TranscriptCacheEntry {
@@ -28,28 +28,28 @@ export interface TranscriptCacheEntry {
  */
 export async function getTranscriptByVideoExtId(
   videoExtId: string,
-  lang: string = "en"
+  lang: string = 'en',
 ): Promise<TranscriptCacheEntry | null> {
   try {
     const supabase = await createClient();
 
     // Join videos → transcripts using video_ext_id
     const { data, error } = await supabase
-      .from("transcripts")
-      .select("id, segments, quality, videos!inner(video_ext_id)")
-      .eq("videos.video_ext_id", videoExtId)
-      .eq("language", lang)
-      .eq("status", "completed")
-      .in("quality", CACHEABLE_QUALITIES)
-      .order("quality", { ascending: false }) // alphabetical: 'subtitle-raw' < 'subtitle-enhanced'
+      .from('transcripts')
+      .select('id, segments, quality, videos!inner(video_ext_id)')
+      .eq('videos.video_ext_id', videoExtId)
+      .eq('language', lang)
+      .eq('status', 'completed')
+      .in('quality', CACHEABLE_QUALITIES)
+      .order('quality', { ascending: false }) // alphabetical: 'subtitle-raw' < 'subtitle-enhanced'
       .limit(5); // get all qualities, we'll pick best manually
 
     if (error || !data || data.length === 0) return null;
 
     // Pick highest-quality entry
     const best = data.reduce((prev, curr) => {
-      const prevRank = QUALITY_RANK[prev.quality ?? ""] ?? -1;
-      const currRank = QUALITY_RANK[curr.quality ?? ""] ?? -1;
+      const prevRank = QUALITY_RANK[prev.quality ?? ''] ?? -1;
+      const currRank = QUALITY_RANK[curr.quality ?? ''] ?? -1;
       return currRank > prevRank ? curr : prev;
     });
 
@@ -73,10 +73,10 @@ export async function getTranscriptByVideoExtId(
  */
 export async function upsertTranscript(
   videoExtId: string,
-  lang: string = "en",
+  lang: string = 'en',
   quality: TranscriptSource,
   segments: TranscriptSegment[],
-  existingTranscriptId?: string
+  existingTranscriptId?: string,
 ): Promise<void> {
   if (!CACHEABLE_QUALITIES.includes(quality) || segments.length === 0) return;
 
@@ -86,50 +86,55 @@ export async function upsertTranscript(
     if (existingTranscriptId) {
       // Only upgrade — never overwrite a higher-quality transcript with a lower one
       const { data: existing } = await supabase
-        .from("transcripts")
-        .select("quality")
-        .eq("id", existingTranscriptId)
+        .from('transcripts')
+        .select('quality')
+        .eq('id', existingTranscriptId)
         .single();
 
-      if (existing && (QUALITY_RANK[existing.quality ?? ""] ?? -1) > (QUALITY_RANK[quality] ?? -1)) {
-        console.log(`[DB: Transcript] Skipping write — existing quality "${existing.quality}" is better than "${quality}"`);
+      if (
+        existing &&
+        (QUALITY_RANK[existing.quality ?? ''] ?? -1) > (QUALITY_RANK[quality] ?? -1)
+      ) {
+        console.log(
+          `[DB: Transcript] Skipping write — existing quality "${existing.quality}" is better than "${quality}"`,
+        );
         return;
       }
 
       await supabase
-        .from("transcripts")
+        .from('transcripts')
         .update({
           segments,
           quality,
-          status: "completed",
+          status: 'completed',
           updated_at: new Date().toISOString(),
         })
-        .eq("id", existingTranscriptId);
+        .eq('id', existingTranscriptId);
       return;
     }
 
     // Find the video's internal UUID first
     const { data: video } = await supabase
-      .from("videos")
-      .select("id")
-      .eq("video_ext_id", videoExtId)
+      .from('videos')
+      .select('id')
+      .eq('video_ext_id', videoExtId)
       .single();
 
     if (!video) return; // Video not in DB yet — skip caching for now
 
     // Insert new transcript row (upsert on video_id + language)
-    await supabase.from("transcripts").upsert(
+    await supabase.from('transcripts').upsert(
       {
         video_id: video.id,
         language: lang,
         segments,
         quality,
-        status: "completed",
+        status: 'completed',
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "video_id,language" }
+      { onConflict: 'video_id,language' },
     );
   } catch (err) {
-    console.error("[DB: Transcript] Failed to upsert transcript:", err);
+    console.error('[DB: Transcript] Failed to upsert transcript:', err);
   }
 }

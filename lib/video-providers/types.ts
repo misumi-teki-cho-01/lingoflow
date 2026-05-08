@@ -4,7 +4,7 @@ import type {
   PlayerEventCallback,
   PlayerOptions,
   VideoProvider,
-} from "@/types/video";
+} from '@/types/video';
 
 export type { VideoProvider, PlayerState, PlayerEvent, PlayerEventCallback, PlayerOptions };
 

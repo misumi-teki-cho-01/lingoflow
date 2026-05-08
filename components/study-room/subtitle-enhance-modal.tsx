@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef, useState } from "react";
-import { useTranslations, useLocale } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { JsonValidationBadge } from "@/components/ui/json-validation-badge";
+import React, { useEffect, useRef, useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { Button } from '@/components/ui/button';
+import { JsonValidationBadge } from '@/components/ui/json-validation-badge';
 import {
   CheckCircle2,
   ChevronLeft,
@@ -12,22 +12,22 @@ import {
   Save,
   TriangleAlert,
   Wand2,
-} from "lucide-react";
-import { getEnhancementPrompt } from "@/lib/ai/prompts";
-import { useJsonValidation } from "@/hooks/use-json-validation";
-import type { TranscriptSegment } from "@/types/transcript";
+} from 'lucide-react';
+import { getEnhancementPrompt } from '@/lib/ai/prompts';
+import { useJsonValidation } from '@/hooks/use-json-validation';
+import type { TranscriptSegment } from '@/types/transcript';
 
-const PROMPT_LANGUAGE_KEY = "lingo-prompt-language";
+const PROMPT_LANGUAGE_KEY = 'lingo-prompt-language';
 
 const LANGUAGE_OPTIONS = [
-  { value: "zh", label: "中文" },
-  { value: "ja", label: "日本語" },
-  { value: "en", label: "English" },
+  { value: 'zh', label: '中文' },
+  { value: 'ja', label: '日本語' },
+  { value: 'en', label: 'English' },
 ];
 
-type Step = "copy_prompt" | "paste_response" | "preview";
+type Step = 'copy_prompt' | 'paste_response' | 'preview';
 type Notice = {
-  tone: "success" | "error";
+  tone: 'success' | 'error';
   text: string;
 } | null;
 
@@ -43,9 +43,13 @@ export interface SubtitleEnhanceModalProps {
 
 function buildEnhancePrompt(segments: TranscriptSegment[], lang: string): string {
   const input = JSON.stringify(
-    segments.map((s) => ({ start_time: s.start_time, end_time: s.end_time, text: s.text })),
+    segments.map((s) => ({
+      start_time: s.start_time,
+      end_time: s.end_time,
+      text: s.text,
+    })),
     null,
-    2
+    2,
   );
   return `${getEnhancementPrompt(lang)}\n\nTranscript:\n${input}`;
 }
@@ -57,30 +61,27 @@ export function SubtitleEnhanceModal({
   onCancel,
   onSave,
 }: SubtitleEnhanceModalProps) {
-  const t = useTranslations("studyRoom");
+  const t = useTranslations('studyRoom');
   const locale = useLocale();
 
   // "current" = already-enhanced liveSegments; "raw" = original YouTube subtitles
-  const [sourceMode, setSourceMode] = useState<"current" | "raw">("current");
-  const [step, setStep] = useState<Step>("copy_prompt");
-  const [editablePrompt, setEditablePrompt] = useState("");
-  const [pastedJson, setPastedJson] = useState("");
+  const [sourceMode, setSourceMode] = useState<'current' | 'raw'>('current');
+  const [step, setStep] = useState<Step>('copy_prompt');
+  const [editablePrompt, setEditablePrompt] = useState('');
+  const [pastedJson, setPastedJson] = useState('');
   const [enhancedSegments, setEnhancedSegments] = useState<TranscriptSegment[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [promptCopied, setPromptCopied] = useState(false);
   const [promptLanguage, setPromptLanguage] = useState<string>(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       return localStorage.getItem(PROMPT_LANGUAGE_KEY) || locale;
     }
     return locale;
   });
   const pasteTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const jsonValidation = useJsonValidation(
-    step === "paste_response" ? pastedJson : "",
-    "segments"
-  );
+  const jsonValidation = useJsonValidation(step === 'paste_response' ? pastedJson : '', 'segments');
 
   // Apply auto-corrected text back to the textarea when the hook fixes it
   useEffect(() => {
@@ -91,20 +92,20 @@ export function SubtitleEnhanceModal({
 
   useEffect(() => {
     if (!visible) return;
-    setStep("copy_prompt");
-    setSourceMode("current");
-    const saved = typeof window !== "undefined" ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
+    setStep('copy_prompt');
+    setSourceMode('current');
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
     const lang = saved || locale;
     setPromptLanguage(lang);
     setEditablePrompt(buildEnhancePrompt(segments, lang));
-    setPastedJson("");
+    setPastedJson('');
     setEnhancedSegments([]);
     setIsSaving(false);
     setNotice(null);
     setPromptCopied(false);
   }, [visible, segments, locale]);
 
-  const activeSegments = sourceMode === "raw" && rawSegments ? rawSegments : segments;
+  const activeSegments = sourceMode === 'raw' && rawSegments ? rawSegments : segments;
 
   const handleLanguageChange = (lang: string) => {
     setPromptLanguage(lang);
@@ -112,9 +113,9 @@ export function SubtitleEnhanceModal({
     setEditablePrompt(buildEnhancePrompt(activeSegments, lang));
   };
 
-  const handleSourceModeChange = (mode: "current" | "raw") => {
+  const handleSourceModeChange = (mode: 'current' | 'raw') => {
     setSourceMode(mode);
-    const src = mode === "raw" && rawSegments ? rawSegments : segments;
+    const src = mode === 'raw' && rawSegments ? rawSegments : segments;
     setEditablePrompt(buildEnhancePrompt(src, promptLanguage));
   };
 
@@ -125,10 +126,10 @@ export function SubtitleEnhanceModal({
       await navigator.clipboard.writeText(editablePrompt);
       setPromptCopied(true);
       setTimeout(() => setPromptCopied(false), 1500);
-      setNotice({ tone: "success", text: t("promptCopiedToast") });
-      setStep("paste_response");
+      setNotice({ tone: 'success', text: t('promptCopiedToast') });
+      setStep('paste_response');
     } catch {
-      setNotice({ tone: "error", text: t("copyPromptFailed") });
+      setNotice({ tone: 'error', text: t('copyPromptFailed') });
     }
   };
 
@@ -136,27 +137,27 @@ export function SubtitleEnhanceModal({
     try {
       const parsed = JSON.parse(pastedJson) as unknown;
       if (!Array.isArray(parsed) || parsed.length === 0) {
-        setNotice({ tone: "error", text: t("enhanceJsonInvalid") });
+        setNotice({ tone: 'error', text: t('enhanceJsonInvalid') });
         return;
       }
       const isValid = parsed.every(
         (s) =>
           s &&
-          typeof s === "object" &&
-          typeof (s as Record<string, unknown>).start_time === "number" &&
-          typeof (s as Record<string, unknown>).end_time === "number" &&
-          typeof (s as Record<string, unknown>).text === "string" &&
-          ((s as Record<string, unknown>).text as string).length > 0
+          typeof s === 'object' &&
+          typeof (s as Record<string, unknown>).start_time === 'number' &&
+          typeof (s as Record<string, unknown>).end_time === 'number' &&
+          typeof (s as Record<string, unknown>).text === 'string' &&
+          ((s as Record<string, unknown>).text as string).length > 0,
       );
       if (!isValid) {
-        setNotice({ tone: "error", text: t("enhanceJsonInvalid") });
+        setNotice({ tone: 'error', text: t('enhanceJsonInvalid') });
         return;
       }
       setEnhancedSegments(parsed as TranscriptSegment[]);
-      setStep("preview");
+      setStep('preview');
       setNotice(null);
     } catch {
-      setNotice({ tone: "error", text: t("enhanceJsonInvalid") });
+      setNotice({ tone: 'error', text: t('enhanceJsonInvalid') });
     }
   };
 
@@ -165,28 +166,31 @@ export function SubtitleEnhanceModal({
     try {
       await onSave(enhancedSegments);
     } catch {
-      setNotice({ tone: "error", text: t("saveFailed") });
+      setNotice({ tone: 'error', text: t('saveFailed') });
     } finally {
       setIsSaving(false);
     }
   };
 
   const stepTitle = {
-    copy_prompt: t("enhancePromptTitle"),
-    paste_response: t("enhancePasteTitle"),
-    preview: t("enhancePreviewTitle"),
+    copy_prompt: t('enhancePromptTitle'),
+    paste_response: t('enhancePasteTitle'),
+    preview: t('enhancePreviewTitle'),
   }[step];
 
   const stepDesc = {
-    copy_prompt: t("enhancePromptDesc"),
-    paste_response: t("enhancePasteDesc"),
-    preview: t("enhancePreviewDesc", { from: segments.length, to: enhancedSegments.length }),
+    copy_prompt: t('enhancePromptDesc'),
+    paste_response: t('enhancePasteDesc'),
+    preview: t('enhancePreviewDesc', {
+      from: segments.length,
+      to: enhancedSegments.length,
+    }),
   }[step];
 
   const noticeClass =
-    notice?.tone === "success"
-      ? "border-emerald-300/70 bg-emerald-50 text-emerald-700"
-      : "border-red-300/70 bg-red-50 text-red-700";
+    notice?.tone === 'success'
+      ? 'border-emerald-300/70 bg-emerald-50 text-emerald-700'
+      : 'border-red-300/70 bg-red-50 text-red-700';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
@@ -201,14 +205,16 @@ export function SubtitleEnhanceModal({
             <p className="text-sm text-muted-foreground mt-1">{stepDesc}</p>
           </div>
           <Button variant="outline" onClick={onCancel} disabled={isSaving}>
-            {t("close")}
+            {t('close')}
           </Button>
         </div>
 
         {/* Notice */}
         {notice && (
-          <div className={`mx-6 mt-4 rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${noticeClass}`}>
-            {notice.tone === "success" ? (
+          <div
+            className={`mx-6 mt-4 rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${noticeClass}`}
+          >
+            {notice.tone === 'success' ? (
               <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
             ) : (
               <TriangleAlert className="h-4 w-4 mt-0.5 shrink-0" />
@@ -219,33 +225,35 @@ export function SubtitleEnhanceModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 bg-muted/10 custom-scrollbar">
-          {step === "copy_prompt" && (
+          {step === 'copy_prompt' && (
             <div className="space-y-4">
               {/* Source selector — only shown when raw segments are available */}
               {rawSegments && rawSegments.length > 0 && (
                 <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/40 px-3 py-2">
                   <span className="text-sm font-medium shrink-0 text-amber-700 dark:text-amber-400">
-                    {t("enhanceSource")}
+                    {t('enhanceSource')}
                   </span>
                   <div className="flex items-center gap-1 rounded-full border border-amber-300 dark:border-amber-700 bg-background p-0.5">
-                    {(["current", "raw"] as const).map((mode) => (
+                    {(['current', 'raw'] as const).map((mode) => (
                       <button
                         key={mode}
                         onClick={() => handleSourceModeChange(mode)}
                         className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                           sourceMode === mode
-                            ? "bg-amber-500 text-white shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
+                            ? 'bg-amber-500 text-white shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
-                        {mode === "current" ? t("enhanceSourceCurrent") : t("enhanceSourceRaw")}
+                        {mode === 'current' ? t('enhanceSourceCurrent') : t('enhanceSourceRaw')}
                       </button>
                     ))}
                   </div>
                   <span className="text-xs text-amber-600 dark:text-amber-500">
-                    {sourceMode === "raw"
-                      ? t("enhanceSourceRawHint", { count: rawSegments.length })
-                      : t("enhanceSourceCurrentHint", { count: segments.length })}
+                    {sourceMode === 'raw'
+                      ? t('enhanceSourceRawHint', { count: rawSegments.length })
+                      : t('enhanceSourceCurrentHint', {
+                          count: segments.length,
+                        })}
                   </span>
                 </div>
               )}
@@ -253,7 +261,7 @@ export function SubtitleEnhanceModal({
               {/* Language selector */}
               <div className="flex items-center gap-3">
                 <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm font-medium shrink-0">{t("promptLanguage")}</span>
+                <span className="text-sm font-medium shrink-0">{t('promptLanguage')}</span>
                 <div className="flex items-center gap-1 rounded-full border border-border bg-muted/30 p-0.5">
                   {LANGUAGE_OPTIONS.map((opt) => (
                     <button
@@ -261,8 +269,8 @@ export function SubtitleEnhanceModal({
                       onClick={() => handleLanguageChange(opt.value)}
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                         promptLanguage === opt.value
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       {opt.label}
@@ -273,7 +281,7 @@ export function SubtitleEnhanceModal({
 
               {/* Editable prompt */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t("promptEditableLabel")}</label>
+                <label className="text-sm font-medium">{t('promptEditableLabel')}</label>
                 <textarea
                   value={editablePrompt}
                   onChange={(e) => setEditablePrompt(e.target.value)}
@@ -283,10 +291,10 @@ export function SubtitleEnhanceModal({
             </div>
           )}
 
-          {step === "paste_response" && (
+          {step === 'paste_response' && (
             <div className="space-y-2">
               <label htmlFor="enhance-json" className="text-sm font-medium">
-                {t("enhancePasteLabel")}
+                {t('enhancePasteLabel')}
               </label>
               <textarea
                 id="enhance-json"
@@ -295,11 +303,11 @@ export function SubtitleEnhanceModal({
                 onChange={(e) => setPastedJson(e.target.value)}
                 placeholder={'[{"start_time": 0.0, "end_time": 2.5, "text": "..."}, ...]'}
                 className={`min-h-[300px] w-full rounded-lg border bg-background px-3 py-3 text-sm font-mono focus-visible:outline-none focus-visible:ring-1 custom-scrollbar transition-colors ${
-                  jsonValidation.status === "invalid"
-                    ? "border-red-400 focus-visible:ring-red-400"
-                    : jsonValidation.status === "valid"
-                      ? "border-emerald-400 focus-visible:ring-emerald-400"
-                      : "border-input focus-visible:ring-ring"
+                  jsonValidation.status === 'invalid'
+                    ? 'border-red-400 focus-visible:ring-red-400'
+                    : jsonValidation.status === 'valid'
+                      ? 'border-emerald-400 focus-visible:ring-emerald-400'
+                      : 'border-input focus-visible:ring-ring'
                 }`}
               />
               <JsonValidationBadge
@@ -310,10 +318,13 @@ export function SubtitleEnhanceModal({
             </div>
           )}
 
-          {step === "preview" && (
+          {step === 'preview' && (
             <div className="space-y-4">
               <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-                {t("enhancePreviewDesc", { from: segments.length, to: enhancedSegments.length })}
+                {t('enhancePreviewDesc', {
+                  from: segments.length,
+                  to: enhancedSegments.length,
+                })}
               </div>
               <div className="w-full border rounded-lg overflow-hidden bg-background">
                 <table className="w-full text-sm text-left">
@@ -334,7 +345,10 @@ export function SubtitleEnhanceModal({
                     ))}
                     {enhancedSegments.length > 8 && (
                       <tr>
-                        <td colSpan={2} className="px-4 py-3 text-xs text-center text-muted-foreground">
+                        <td
+                          colSpan={2}
+                          className="px-4 py-3 text-xs text-center text-muted-foreground"
+                        >
                           … {enhancedSegments.length - 8} more segments
                         </td>
                       </tr>
@@ -348,38 +362,43 @@ export function SubtitleEnhanceModal({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border shrink-0 bg-muted/20 flex gap-3 justify-end items-center">
-          {step === "copy_prompt" && (
-            <Button onClick={handleCopyAndContinue} disabled={!editablePrompt.trim()} className="gap-2">
-              {promptCopied ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-              {t("copyAndContinue")}
+          {step === 'copy_prompt' && (
+            <Button
+              onClick={handleCopyAndContinue}
+              disabled={!editablePrompt.trim()}
+              className="gap-2"
+            >
+              {promptCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {t('copyAndContinue')}
             </Button>
           )}
 
-          {step === "paste_response" && (
+          {step === 'paste_response' && (
             <>
-              <Button variant="outline" onClick={() => setStep("copy_prompt")} className="gap-2">
+              <Button variant="outline" onClick={() => setStep('copy_prompt')} className="gap-2">
                 <ChevronLeft className="h-4 w-4" />
-                {t("backToPromptEditor")}
+                {t('backToPromptEditor')}
               </Button>
               <Button onClick={handleApplyJson} disabled={!pastedJson.trim()} className="gap-2">
-                {t("applyJson")}
+                {t('applyJson')}
               </Button>
             </>
           )}
 
-          {step === "preview" && (
+          {step === 'preview' && (
             <>
-              <Button variant="outline" onClick={() => setStep("paste_response")} disabled={isSaving} className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setStep('paste_response')}
+                disabled={isSaving}
+                className="gap-2"
+              >
                 <ChevronLeft className="h-4 w-4" />
-                {t("backToPasteJson")}
+                {t('backToPasteJson')}
               </Button>
               <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                 <Save className="h-4 w-4" />
-                {isSaving ? t("saving") : t("saveToDb")}
+                {isSaving ? t('saving') : t('saveToDb')}
               </Button>
             </>
           )}

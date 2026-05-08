@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * Shown by Next.js while the video page Server Component is loading.
@@ -19,7 +19,6 @@ export default function VideoLoading() {
 
       {/* Main two-column grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0">
-
         {/* Left — video area */}
         <div className="flex flex-col p-4 gap-3 border-r border-border/50">
           {/* Video info bar */}
@@ -40,7 +39,6 @@ export default function VideoLoading() {
             <Skeleton key={i} className="h-14 w-full rounded-lg" />
           ))}
         </div>
-
       </div>
     </div>
   );

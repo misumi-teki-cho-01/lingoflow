@@ -1,4 +1,4 @@
-import type { VideoSourceType } from "@/types/video";
+import type { VideoSourceType } from '@/types/video';
 
 export interface ParsedVideoUrl {
   source: VideoSourceType;
@@ -27,7 +27,7 @@ export function parseVideoUrl(url: string): ParsedVideoUrl | null {
     for (const pattern of ytPatterns) {
       const match = trimmed.match(pattern);
       if (match) {
-        return { source: "youtube", videoId: match[1], url: trimmed };
+        return { source: 'youtube', videoId: match[1], url: trimmed };
       }
     }
 
@@ -35,7 +35,7 @@ export function parseVideoUrl(url: string): ParsedVideoUrl | null {
     const biliPattern = /bilibili\.com\/video\/(BV[a-zA-Z0-9]+)/;
     const biliMatch = trimmed.match(biliPattern);
     if (biliMatch) {
-      return { source: "bilibili", videoId: biliMatch[1], url: trimmed };
+      return { source: 'bilibili', videoId: biliMatch[1], url: trimmed };
     }
 
     return null;
@@ -49,13 +49,13 @@ export function parseVideoUrl(url: string): ParsedVideoUrl | null {
  */
 export function getYouTubeThumbnail(
   videoId: string,
-  quality: "default" | "medium" | "high" | "maxres" = "high",
+  quality: 'default' | 'medium' | 'high' | 'maxres' = 'high',
 ): string {
   const qualityMap = {
-    default: "default",
-    medium: "mqdefault",
-    high: "hqdefault",
-    maxres: "maxresdefault",
+    default: 'default',
+    medium: 'mqdefault',
+    high: 'hqdefault',
+    maxres: 'maxresdefault',
   };
   return `https://img.youtube.com/vi/${videoId}/${qualityMap[quality]}.jpg`;
 }

@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Link } from "@/i18n/navigation";
-import { Play, Clock } from "lucide-react";
-import { formatTime } from "@/lib/utils/format";
-import { formatDistanceToNow } from "date-fns";
-import { zhCN, ja, enUS, type Locale } from "date-fns/locale";
-import { useLocale } from "next-intl";
+import { Link } from '@/i18n/navigation';
+import { Play, Clock } from 'lucide-react';
+import { formatTime } from '@/lib/utils/format';
+import { formatDistanceToNow } from 'date-fns';
+import { zhCN, ja, enUS, type Locale } from 'date-fns/locale';
+import { useLocale } from 'next-intl';
 
 export interface VideoCardData {
   video_ext_id: string;
@@ -34,8 +34,7 @@ interface VideoCardProps {
 export function VideoCard({ video }: VideoCardProps) {
   const locale = useLocale();
   const thumbnail =
-    video.thumbnail_url ??
-    `https://img.youtube.com/vi/${video.video_ext_id}/hqdefault.jpg`;
+    video.thumbnail_url ?? `https://img.youtube.com/vi/${video.video_ext_id}/hqdefault.jpg`;
 
   const relativeTime = formatDistanceToNow(new Date(video.created_at), {
     addSuffix: true,
@@ -52,7 +51,7 @@ export function VideoCard({ video }: VideoCardProps) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={thumbnail}
-          alt={video.title ?? "Video thumbnail"}
+          alt={video.title ?? 'Video thumbnail'}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />

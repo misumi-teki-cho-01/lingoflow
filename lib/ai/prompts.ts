@@ -1,7 +1,7 @@
 const LANGUAGE_MAP: Record<string, string> = {
-    zh: "简体中文",
-    ja: "日本語",
-    en: "English"
+  zh: '简体中文',
+  ja: '日本語',
+  en: 'English',
 };
 
 const STRICT_FORMAT_NOTE_ZH = `
@@ -82,13 +82,13 @@ Format rules:
 - Output must contain nothing other than the JSON object
 `;
 
-export function getExplainDictationPrompt(locale: string = "zh"): string {
-    const isChinese = locale.startsWith("zh");
-    const isJapanese = locale.startsWith("ja");
-    const targetLanguage = LANGUAGE_MAP[locale] || LANGUAGE_MAP["zh"];
+export function getExplainDictationPrompt(locale: string = 'zh'): string {
+  const isChinese = locale.startsWith('zh');
+  const isJapanese = locale.startsWith('ja');
+  const targetLanguage = LANGUAGE_MAP[locale] || LANGUAGE_MAP['zh'];
 
-    if (isChinese) {
-        return `你是一位专业的语言学习助手。
+  if (isChinese) {
+    return `你是一位专业的语言学习助手。
 我将为你提供一段 Markdown 文本作为【语境上下文】，并在下面列出用户需要学习的【目标词汇列表】。
 
 **重要提示**：【语境上下文】中，目标词汇已用 **粗体**（\`**...**\`）标注出来。请务必先在原文中找到该词被加粗标注的具体位置，再基于该位置所在句子的完整语境给出解释——而非仅凭词汇列表中的词形来猜测其语境。
@@ -105,10 +105,10 @@ ${STRICT_FORMAT_NOTE_ZH}
 --- 目标词汇列表 ---
 {{words}}
 `;
-    }
+  }
 
-    if (isJapanese) {
-        return `あなたはプロの言語学習アシスタントです。
+  if (isJapanese) {
+    return `あなたはプロの言語学習アシスタントです。
 以下に【文脈テキスト】としてMarkdownテキストを提供し、その下にユーザーが学習したい【説明すべき単語リスト】を示します。
 
 **重要**：【文脈テキスト】では、対象の語は **太字**（\`**...**\`）でマークされています。まずテキスト中でその語が太字になっている箇所を正確に特定し、その箇所の文の文脈に基づいて解説してください。単語リストの語形だけから文脈を推測しないでください。
@@ -125,10 +125,10 @@ ${STRICT_FORMAT_NOTE_JA}
 --- 説明すべき単語リスト ---
 {{words}}
 `;
-    }
+  }
 
-    // English / fallback
-    return `You are an expert language learning assistant.
+  // English / fallback
+  return `You are an expert language learning assistant.
 I will provide you with a Markdown text as CONTEXT, and a LIST of words/phrases that the user wants to learn.
 
 **Important**: In the CONTEXT, the target words are marked in **bold** (\`**...**\`). You must first locate each word at its exact bolded position in the text, then explain it based on the complete sentence context at that position — do NOT guess the context from the word list alone.
@@ -147,19 +147,19 @@ ${STRICT_FORMAT_NOTE_EN}
 `;
 }
 
-export function getEnhancementPrompt(locale: string = "zh"): string {
-    const isChinese = locale.startsWith("zh");
-    const isJapanese = locale.startsWith("ja");
+export function getEnhancementPrompt(locale: string = 'zh'): string {
+  const isChinese = locale.startsWith('zh');
+  const isJapanese = locale.startsWith('ja');
 
-    const FORMAT_RULE = `Return ONLY a JSON array with this exact format, no markdown fencing:
+  const FORMAT_RULE = `Return ONLY a JSON array with this exact format, no markdown fencing:
 [{"start_time": 0.0, "end_time": 2.5, "text": "Hello and welcome."}]
 
 Rules:
 - Timestamps in seconds (float)
 - Return valid JSON only — no text before or after the array`;
 
-    if (isChinese) {
-        return `你是一位专业的语言学习助手。我将提供一段带时间戳的视频字幕，请按以下要求进行优化：
+  if (isChinese) {
+    return `你是一位专业的语言学习助手。我将提供一段带时间戳的视频字幕，请按以下要求进行优化：
 
 1. 修正标点符号、大小写和拼写错误
 2. 将属于同一句话的片段合并（取所有被合并片段中最小的 start_time 和最大的 end_time）
@@ -173,10 +173,10 @@ Rules:
 - 片段之间存在间隙是可以接受的——不要为了填补间隙而调整时间戳
 
 ${FORMAT_RULE}`;
-    }
+  }
 
-    if (isJapanese) {
-        return `あなたはプロの言語学習アシスタントです。タイムスタンプ付きの動画字幕を提供します。以下の改善を行ってください：
+  if (isJapanese) {
+    return `あなたはプロの言語学習アシスタントです。タイムスタンプ付きの動画字幕を提供します。以下の改善を行ってください：
 
 1. 句読点・大文字/小文字・スペルミスを修正する
 2. 同じ文に属するフラグメントを結合する（結合するフラグメントの中で最も小さい start_time と最も大きい end_time を使用する）
@@ -190,10 +190,10 @@ ${FORMAT_RULE}`;
 - セグメント間にギャップがあっても許容される——ギャップを埋めるためにタイムスタンプを調整しない
 
 ${FORMAT_RULE}`;
-    }
+  }
 
-    // English / fallback
-    return `You are a language learning assistant. I'll give you a transcript from a video with timestamps. Please improve it for English learners:
+  // English / fallback
+  return `You are a language learning assistant. I'll give you a transcript from a video with timestamps. Please improve it for English learners:
 
 1. Fix punctuation, capitalization, and spelling errors
 2. Merge fragments that belong to the same sentence (use the earliest start_time and latest end_time of the merged fragments)

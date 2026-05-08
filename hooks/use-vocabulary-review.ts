@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState, useCallback } from "react";
-import type { VocabularyExplanation } from "@/lib/ai/services";
+import { useState, useCallback } from 'react';
+import type { VocabularyExplanation } from '@/lib/ai/services';
 
 export interface SelectedWord {
   id: string;
   text: string;
 }
 
-export type ReviewStep = "review_words" | "prompt_editor" | "paste_json" | "review_ai";
+export type ReviewStep = 'review_words' | 'prompt_editor' | 'paste_json' | 'review_ai';
 
 export interface UseVocabularyReviewReturn {
   showReviewModal: boolean;
@@ -21,14 +21,15 @@ export interface UseVocabularyReviewReturn {
 }
 
 export function useVocabularyReview(
-  initialDefinitions: Record<string, VocabularyExplanation> = {}
+  initialDefinitions: Record<string, VocabularyExplanation> = {},
 ): UseVocabularyReviewReturn {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedWords, setSelectedWords] = useState<SelectedWord[]>([]);
-  const [reviewStep, setReviewStep] = useState<ReviewStep>("review_words");
-  const [definitions, setDefinitions] = useState<Record<string, VocabularyExplanation>>(initialDefinitions);
+  const [reviewStep, setReviewStep] = useState<ReviewStep>('review_words');
+  const [definitions, setDefinitions] =
+    useState<Record<string, VocabularyExplanation>>(initialDefinitions);
 
-  const openReview = useCallback((words: SelectedWord[], step: ReviewStep = "review_words") => {
+  const openReview = useCallback((words: SelectedWord[], step: ReviewStep = 'review_words') => {
     setSelectedWords(words);
     setReviewStep(step);
     setShowReviewModal(true);

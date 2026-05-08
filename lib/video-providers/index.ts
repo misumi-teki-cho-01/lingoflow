@@ -1,12 +1,12 @@
-import type { VideoSourceType, VideoProvider } from "@/types/video";
-import { YouTubeProvider } from "./youtube-provider";
-import { BilibiliProvider } from "./bilibili-provider";
+import type { VideoSourceType, VideoProvider } from '@/types/video';
+import { YouTubeProvider } from './youtube-provider';
+import { BilibiliProvider } from './bilibili-provider';
 
 export function createVideoProvider(source: VideoSourceType): VideoProvider {
   switch (source) {
-    case "youtube":
+    case 'youtube':
       return new YouTubeProvider();
-    case "bilibili":
+    case 'bilibili':
       return new BilibiliProvider();
     default:
       throw new Error(`Unsupported video source: ${source}`);
@@ -25,7 +25,7 @@ export function detectVideoSource(
   for (const pattern of ytPatterns) {
     const match = url.match(pattern);
     if (match) {
-      return { source: "youtube", videoId: match[1] };
+      return { source: 'youtube', videoId: match[1] };
     }
   }
 
@@ -33,7 +33,7 @@ export function detectVideoSource(
   const biliPattern = /bilibili\.com\/video\/(BV[a-zA-Z0-9]+)/;
   const biliMatch = url.match(biliPattern);
   if (biliMatch) {
-    return { source: "bilibili", videoId: biliMatch[1] };
+    return { source: 'bilibili', videoId: biliMatch[1] };
   }
 
   return null;

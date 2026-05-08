@@ -1,5 +1,11 @@
-import type { VideoProvider, PlayerState, PlayerEvent, PlayerEventCallback, PlayerOptions } from "./types";
-import { EventEmitter } from "./types";
+import type {
+  VideoProvider,
+  PlayerState,
+  PlayerEvent,
+  PlayerEventCallback,
+  PlayerOptions,
+} from './types';
+import { EventEmitter } from './types';
 
 // YouTube IFrame API type declarations
 declare global {
@@ -55,14 +61,14 @@ function loadYouTubeAPI(): Promise<void> {
   if (apiLoadPromise) return apiLoadPromise;
 
   apiLoadPromise = new Promise<void>((resolve) => {
-    if (typeof window !== "undefined" && window.YT?.Player) {
+    if (typeof window !== 'undefined' && window.YT?.Player) {
       resolve();
       return;
     }
 
     window.onYouTubeIframeAPIReady = () => resolve();
-    const script = document.createElement("script");
-    script.src = "https://www.youtube.com/iframe_api";
+    const script = document.createElement('script');
+    script.src = 'https://www.youtube.com/iframe_api';
     script.async = true;
     document.head.appendChild(script);
   });
@@ -71,12 +77,12 @@ function loadYouTubeAPI(): Promise<void> {
 }
 
 const YT_STATE_MAP: Record<number, PlayerState> = {
-  [-1]: "unstarted",
-  [0]: "ended",
-  [1]: "playing",
-  [2]: "paused",
-  [3]: "buffering",
-  [5]: "cued",
+  [-1]: 'unstarted',
+  [0]: 'ended',
+  [1]: 'playing',
+  [2]: 'paused',
+  [3]: 'buffering',
+  [5]: 'cued',
 };
 
 export class YouTubeProvider implements VideoProvider {
@@ -84,7 +90,7 @@ export class YouTubeProvider implements VideoProvider {
   private container: HTMLDivElement | null = null;
   private emitter = new EventEmitter();
   private timeUpdateInterval: ReturnType<typeof setInterval> | null = null;
-  private currentState: PlayerState = "unstarted";
+  private currentState: PlayerState = 'unstarted';
 
   async initialize(
     container: HTMLDivElement,
@@ -100,16 +106,16 @@ export class YouTubeProvider implements VideoProvider {
     // in the DOM across React StrictMode double-invocations and re-renders.
     // The iframe YouTube creates will be a child of `container`, inheriting
     // its dimensions (width: 100%; height: 100%) correctly.
-    container.innerHTML = ""; // clear any leftover from prev init
-    const placeholder = document.createElement("div");
-    placeholder.style.cssText = "width:100%;height:100%;";
+    container.innerHTML = ''; // clear any leftover from prev init
+    const placeholder = document.createElement('div');
+    placeholder.style.cssText = 'width:100%;height:100%;';
     container.appendChild(placeholder);
 
     return new Promise<void>((resolve) => {
       this.player = new window.YT.Player(placeholder, {
         videoId,
-        width: "100%",
-        height: "100%",
+        width: '100%',
+        height: '100%',
         playerVars: {
           autoplay: options?.autoplay ? 1 : 0,
           start: options?.startTime ? Math.floor(options.startTime) : undefined,
@@ -124,22 +130,22 @@ export class YouTubeProvider implements VideoProvider {
           onReady: () => {
             if (options?.muted) this.player?.mute();
             this.startTimeUpdates();
-            this.emitter.emit("ready");
+            this.emitter.emit('ready');
             resolve();
           },
           onStateChange: (event) => {
-            const state = YT_STATE_MAP[event.data] ?? "unstarted";
+            const state = YT_STATE_MAP[event.data] ?? 'unstarted';
             this.currentState = state;
-            this.emitter.emit("stateChange", state);
+            this.emitter.emit('stateChange', state);
 
-            if (state === "playing") {
+            if (state === 'playing') {
               this.startTimeUpdates();
-            } else if (state === "paused" || state === "ended") {
+            } else if (state === 'paused' || state === 'ended') {
               this.stopTimeUpdates();
             }
           },
           onError: (event) => {
-            this.emitter.emit("error", event.data);
+            this.emitter.emit('error', event.data);
           },
         },
       });
@@ -152,26 +158,26 @@ export class YouTubeProvider implements VideoProvider {
     this.player = null;
     // Clean out container so the next initialize() starts fresh
     if (this.container) {
-      this.container.innerHTML = "";
+      this.container.innerHTML = '';
       this.container = null;
     }
     this.emitter.removeAll();
   }
 
   play(): void {
-    if (typeof this.player?.playVideo === "function") {
+    if (typeof this.player?.playVideo === 'function') {
       this.player.playVideo();
     }
   }
 
   pause(): void {
-    if (typeof this.player?.pauseVideo === "function") {
+    if (typeof this.player?.pauseVideo === 'function') {
       this.player.pauseVideo();
     }
   }
 
   seekTo(timeSeconds: number): void {
-    if (typeof this.player?.seekTo === "function") {
+    if (typeof this.player?.seekTo === 'function') {
       this.player.seekTo(timeSeconds, true);
     }
   }
@@ -212,8 +218,8 @@ export class YouTubeProvider implements VideoProvider {
   private startTimeUpdates(): void {
     if (this.timeUpdateInterval) return;
     this.timeUpdateInterval = setInterval(() => {
-      if (this.player && this.currentState === "playing") {
-        this.emitter.emit("timeUpdate", this.player.getCurrentTime());
+      if (this.player && this.currentState === 'playing') {
+        this.emitter.emit('timeUpdate', this.player.getCurrentTime());
       }
     }, 250);
   }

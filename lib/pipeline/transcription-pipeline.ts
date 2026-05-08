@@ -1,18 +1,18 @@
-import type { TranscriptSegment } from "@/types/transcript";
-import type { VideoSourceType } from "@/types/video";
-import { fetchSubtitles } from "@/lib/services/subtitle-fetcher";
-import { enhanceSubtitlesForLearners } from "@/lib/ai/services";
+import type { TranscriptSegment } from '@/types/transcript';
+import type { VideoSourceType } from '@/types/video';
+import { fetchSubtitles } from '@/lib/services/subtitle-fetcher';
+import { enhanceSubtitlesForLearners } from '@/lib/ai/services';
 
 export type TranscriptSource =
-  | "subtitle-enhanced"   // Level 1+2: subtitles found and AI-enhanced
-  | "subtitle-raw"        // Level 1 only: subtitles found, AI unavailable
-  | "audio-transcribed"   // Level 3: no subtitles, used audio transcription
-  | "failed";             // All levels failed
+  | 'subtitle-enhanced' // Level 1+2: subtitles found and AI-enhanced
+  | 'subtitle-raw' // Level 1 only: subtitles found, AI unavailable
+  | 'audio-transcribed' // Level 3: no subtitles, used audio transcription
+  | 'failed'; // All levels failed
 
 export interface PipelineResult {
   segments: TranscriptSegment[];
   source: TranscriptSource;
-  subtitleType: "manual" | "auto-generated" | "none";
+  subtitleType: 'manual' | 'auto-generated' | 'none';
   aiEnhanced: boolean;
   error?: string;
 }
@@ -28,26 +28,25 @@ export interface PipelineResult {
 export async function runTranscriptionPipeline(
   sourceType: VideoSourceType,
   videoId: string,
-  preferredLang: string = "en",
-  initialState?: { segments: TranscriptSegment[]; quality: TranscriptSource }
+  preferredLang: string = 'en',
+  initialState?: { segments: TranscriptSegment[]; quality: TranscriptSource },
 ): Promise<PipelineResult> {
-
   // If we already have raw subtitles (e.g. from previous run or cache), we just try to upgrade them
-  if (initialState?.quality === "subtitle-raw") {
+  if (initialState?.quality === 'subtitle-raw') {
     const enhanced = await enhanceSubtitlesForLearners(initialState.segments);
     if (enhanced.enhanced) {
       return {
         segments: enhanced.segments,
-        source: "subtitle-enhanced",
-        subtitleType: "auto-generated",
+        source: 'subtitle-enhanced',
+        subtitleType: 'auto-generated',
         aiEnhanced: true,
       };
     }
     // Optimization failed or unavailable, fallback to what we already had
     return {
       segments: initialState.segments,
-      source: "subtitle-raw",
-      subtitleType: "auto-generated", // Assume auto-generated since we don't know the exact original source here
+      source: 'subtitle-raw',
+      subtitleType: 'auto-generated', // Assume auto-generated since we don't know the exact original source here
       aiEnhanced: false,
     };
   }
@@ -58,10 +57,10 @@ export async function runTranscriptionPipeline(
   if (subtitleResult.segments.length === 0) {
     return {
       segments: [],
-      source: "failed",
-      subtitleType: "none",
+      source: 'failed',
+      subtitleType: 'none',
       aiEnhanced: false,
-      error: "No subtitles available for this video.",
+      error: 'No subtitles available for this video.',
     };
   }
 
@@ -71,8 +70,8 @@ export async function runTranscriptionPipeline(
   if (enhanced.enhanced) {
     return {
       segments: enhanced.segments,
-      source: "subtitle-enhanced",
-      subtitleType: subtitleResult.source as "manual" | "auto-generated",
+      source: 'subtitle-enhanced',
+      subtitleType: subtitleResult.source as 'manual' | 'auto-generated',
       aiEnhanced: true,
     };
   }
@@ -80,8 +79,8 @@ export async function runTranscriptionPipeline(
   // AI unavailable — return raw subtitles
   return {
     segments: subtitleResult.segments,
-    source: "subtitle-raw",
-    subtitleType: subtitleResult.source as "manual" | "auto-generated",
+    source: 'subtitle-raw',
+    subtitleType: subtitleResult.source as 'manual' | 'auto-generated',
     aiEnhanced: false,
     error: enhanced.error,
   };

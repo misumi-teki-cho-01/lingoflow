@@ -1,8 +1,8 @@
-import { forwardRef, memo, Fragment } from "react";
-import { formatTime, stripPunctuation } from "@/lib/utils/format";
-import { Play } from "lucide-react";
-import type { TranscriptSegment, CcSelection, DragState } from "@/types/transcript";
-import type { VocabularyExplanation } from "@/lib/ai/services";
+import { forwardRef, memo, Fragment } from 'react';
+import { formatTime, stripPunctuation } from '@/lib/utils/format';
+import { Play } from 'lucide-react';
+import type { TranscriptSegment, CcSelection, DragState } from '@/types/transcript';
+import type { VocabularyExplanation } from '@/lib/ai/services';
 
 interface TranscriptSegmentProps {
   segment: TranscriptSegment;
@@ -43,8 +43,8 @@ interface TranscriptSegmentProps {
 function HighlightedText({ text, query }: { text: string; query?: string }) {
   if (!query?.trim()) return <>{text}</>;
 
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
 
   return (
     <>
@@ -55,7 +55,7 @@ function HighlightedText({ text, query }: { text: string; query?: string }) {
           </mark>
         ) : (
           <span key={i}>{part}</span>
-        )
+        ),
       )}
     </>
   );
@@ -68,9 +68,9 @@ function HighlightedText({ text, query }: { text: string; query?: string }) {
  * and `handleDragEnd` cycles the selection state on each tap.
  */
 function renderHyphenatedToken(token: string, selectedText: string): React.ReactNode {
-  const parts = token.split("-");
+  const parts = token.split('-');
   const selectedParts = new Set(
-    selectedText.split("-").map((p) => stripPunctuation(p).toLowerCase())
+    selectedText.split('-').map((p) => stripPunctuation(p).toLowerCase()),
   );
   return (
     <>
@@ -81,13 +81,13 @@ function renderHyphenatedToken(token: string, selectedText: string): React.React
             <span
               className={
                 inSel
-                  ? "bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100 rounded px-0.5"
-                  : "opacity-40"
+                  ? 'bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100 rounded px-0.5'
+                  : 'opacity-40'
               }
             >
               {part}
             </span>
-            {pi < parts.length - 1 && "-"}
+            {pi < parts.length - 1 && '-'}
           </Fragment>
         );
       })}
@@ -146,12 +146,12 @@ function WordClickableText({
     // Pass 1: phrase matches (keys that contain spaces).
     // Done first so a phrase like "run out" wins over single "run".
     definitionKeyMap.forEach((def, phrase) => {
-      if (!phrase.includes(" ")) return;
+      if (!phrase.includes(' ')) return;
       const phraseWords = phrase.split(/\s+/);
       for (let i = 0; i <= nonWsTokens.length - phraseWords.length; i++) {
         if (defAtWordIdx.has(i)) continue; // already claimed by a longer phrase
         const matches = phraseWords.every(
-          (pw, j) => stripPunctuation(nonWsTokens[i + j]).toLowerCase() === pw
+          (pw, j) => stripPunctuation(nonWsTokens[i + j]).toLowerCase() === pw,
         );
         if (matches) defAtWordIdx.set(i, def);
       }
@@ -186,7 +186,7 @@ function WordClickableText({
         const selectedText = selectedTextMap?.get(posKey);
         const isPartiallySelected =
           isSelected &&
-          token.includes("-") &&
+          token.includes('-') &&
           selectedText !== undefined &&
           selectedText.toLowerCase() !== stripPunctuation(token).toLowerCase();
 
@@ -204,7 +204,7 @@ function WordClickableText({
         const defForWord = defAtWordIdx.get(currentWordIdx);
         const hasDef = defForWord != null;
         // Phrase definitions get a dashed underline; single-word get solid.
-        const isPhraseDef = hasDef && defForWord.original_text.includes(" ");
+        const isPhraseDef = hasDef && defForWord.original_text.includes(' ');
 
         return (
           <span
@@ -228,20 +228,20 @@ function WordClickableText({
                 onDefinitionClick?.(
                   defForWord.original_text.toLowerCase(),
                   e.clientX + 10,
-                  e.clientY + 10
+                  e.clientY + 10,
                 );
               }
             }}
             className={`cursor-pointer rounded px-0.5 transition-colors select-none ${
               highlighted
-                ? "bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100"
+                ? 'bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100'
                 : hasDef
-                  ? "text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                  : "hover:bg-muted"
+                  ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
+                  : 'hover:bg-muted'
             } ${
               hasDef
-                ? `border-b-2 border-indigo-400 dark:border-indigo-500 ${isPhraseDef ? "border-dashed" : ""}`
-                : ""
+                ? `border-b-2 border-indigo-400 dark:border-indigo-500 ${isPhraseDef ? 'border-dashed' : ''}`
+                : ''
             }`}
           >
             {isPartiallySelected && selectedText
@@ -255,110 +255,104 @@ function WordClickableText({
 }
 
 export const TranscriptSegmentRow = memo(
-  forwardRef<HTMLDivElement, TranscriptSegmentProps>(
-    function TranscriptSegmentRow(
-      {
-        segment,
-        index,
-        isActive,
-        onSeek,
-        onClick,
-        searchQuery,
-        wordClickMode,
-        selectedPositionKeys,
-        selectedTextMap,
-        dragState,
-        onDragStart,
-        onDragEnter,
-        onDragEnd,
-        definitionKeyMap,
-        definitionPositionMap,
-        onDefinitionClick,
-      },
-      ref
-    ) {
-      return (
-        <div
-          ref={ref}
-          // In word-click mode the row is NOT interactive — only the ▶ button seeks.
-          // In search/default mode the whole row is still clickable.
-          role={wordClickMode ? undefined : "button"}
-          tabIndex={wordClickMode ? undefined : 0}
-          onClick={
-            wordClickMode
-              ? undefined
-              : () => (onClick ?? onSeek)(segment.start_time)
-          }
-          onKeyDown={
-            wordClickMode
-              ? undefined
-              : (e) => e.key === "Enter" && (onClick ?? onSeek)(segment.start_time)
-          }
-          className={`
+  forwardRef<HTMLDivElement, TranscriptSegmentProps>(function TranscriptSegmentRow(
+    {
+      segment,
+      index,
+      isActive,
+      onSeek,
+      onClick,
+      searchQuery,
+      wordClickMode,
+      selectedPositionKeys,
+      selectedTextMap,
+      dragState,
+      onDragStart,
+      onDragEnter,
+      onDragEnd,
+      definitionKeyMap,
+      definitionPositionMap,
+      onDefinitionClick,
+    },
+    ref,
+  ) {
+    return (
+      <div
+        ref={ref}
+        // In word-click mode the row is NOT interactive — only the ▶ button seeks.
+        // In search/default mode the whole row is still clickable.
+        role={wordClickMode ? undefined : 'button'}
+        tabIndex={wordClickMode ? undefined : 0}
+        onClick={wordClickMode ? undefined : () => (onClick ?? onSeek)(segment.start_time)}
+        onKeyDown={
+          wordClickMode
+            ? undefined
+            : (e) => e.key === 'Enter' && (onClick ?? onSeek)(segment.start_time)
+        }
+        className={`
             group flex gap-4 rounded-lg px-4 py-3 transition-all duration-200 outline-none
-            ${wordClickMode ? "" : "cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/50"}
-            ${isActive ? "bg-primary/10 ring-1 ring-inset ring-primary/20" : "hover:bg-muted/50"}
+            ${wordClickMode ? '' : 'cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/50'}
+            ${isActive ? 'bg-primary/10 ring-1 ring-inset ring-primary/20' : 'hover:bg-muted/50'}
           `}
-        >
-          {/* Timestamp & play button */}
-          <div className="mt-0.5 flex flex-col items-center gap-1 w-10 shrink-0">
-            <span
-              className={`
-                font-mono text-[10px] tabular-nums transition-colors
-                ${isActive ? "text-primary font-bold" : "text-muted-foreground/50 group-hover:text-muted-foreground"}
-              `}
-            >
-              {formatTime(segment.start_time)}
-            </span>
-            {/* ▶ is always a real button — the only seek trigger in word-click mode */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSeek(segment.start_time);
-              }}
-              aria-label={`Seek to ${formatTime(segment.start_time)}`}
-              className={`transition-all duration-200 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary ${
-                isActive
-                  ? "opacity-100 scale-100"
-                  : "opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100"
-              }`}
-            >
-              <Play
-                className={`h-3 w-3 ${isActive ? "fill-primary text-primary" : "text-muted-foreground"}`}
-              />
-            </button>
-          </div>
-
-          {/* Text */}
-          <p
+      >
+        {/* Timestamp & play button */}
+        <div className="mt-0.5 flex flex-col items-center gap-1 w-10 shrink-0">
+          <span
             className={`
-              flex-1 text-sm leading-relaxed transition-colors
-              ${isActive ? "text-foreground font-medium" : "text-muted-foreground group-hover:text-foreground"}
-            `}
+                font-mono text-[10px] tabular-nums transition-colors
+                ${isActive ? 'text-primary font-bold' : 'text-muted-foreground/50 group-hover:text-muted-foreground'}
+              `}
           >
-            {wordClickMode ? (
-              <WordClickableText
-                text={segment.text}
-                segmentIndex={index}
-                selectedPositionKeys={selectedPositionKeys}
-                selectedTextMap={selectedTextMap}
-                dragState={dragState}
-                onDragStart={onDragStart}
-                onDragEnter={onDragEnter}
-                onDragEnd={onDragEnd}
-                definitionKeyMap={definitionKeyMap}
-                definitionPositionMap={definitionPositionMap}
-                onDefinitionClick={onDefinitionClick}
-              />
-            ) : (
-              <HighlightedText text={segment.text} query={searchQuery} />
-            )}
-          </p>
+            {formatTime(segment.start_time)}
+          </span>
+          {/* ▶ is always a real button — the only seek trigger in word-click mode */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSeek(segment.start_time);
+            }}
+            aria-label={`Seek to ${formatTime(segment.start_time)}`}
+            className={`transition-all duration-200 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary ${
+              isActive
+                ? 'opacity-100 scale-100'
+                : 'opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100'
+            }`}
+          >
+            <Play
+              className={`h-3 w-3 ${isActive ? 'fill-primary text-primary' : 'text-muted-foreground'}`}
+            />
+          </button>
         </div>
-      );
-    }
-  )
+
+        {/* Text */}
+        <p
+          className={`
+              flex-1 text-sm leading-relaxed transition-colors
+              ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground group-hover:text-foreground'}
+            `}
+        >
+          {wordClickMode ? (
+            <WordClickableText
+              text={segment.text}
+              segmentIndex={index}
+              selectedPositionKeys={selectedPositionKeys}
+              selectedTextMap={selectedTextMap}
+              dragState={dragState}
+              onDragStart={onDragStart}
+              onDragEnter={onDragEnter}
+              onDragEnd={onDragEnd}
+              definitionKeyMap={definitionKeyMap}
+              definitionPositionMap={definitionPositionMap}
+              onDefinitionClick={onDefinitionClick}
+            />
+          ) : (
+            <HighlightedText text={segment.text} query={searchQuery} />
+          )}
+        </p>
+      </div>
+    );
+  }),
 );
 
-TranscriptSegmentRow.displayName = "TranscriptSegmentRow";
+TranscriptSegmentRow.displayName = 'TranscriptSegmentRow';

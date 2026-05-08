@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 let genAI: GoogleGenerativeAI | null = null;
 
@@ -6,7 +6,7 @@ function getGeminiClient(): GoogleGenerativeAI {
   if (!genAI) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY environment variable is not set");
+      throw new Error('GEMINI_API_KEY environment variable is not set');
     }
     genAI = new GoogleGenerativeAI(apiKey);
   }
@@ -15,7 +15,7 @@ function getGeminiClient(): GoogleGenerativeAI {
 
 export function getGemini2_0FlashModel() {
   const client = getGeminiClient();
-  return client.getGenerativeModel({ model: "gemini-2.0-flash" });
+  return client.getGenerativeModel({ model: 'gemini-2.0-flash' });
 }
 
 /**

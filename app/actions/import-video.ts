@@ -1,15 +1,15 @@
-"use server";
+'use server';
 
-import { redirect } from "next/navigation";
-import { parseVideoUrl } from "@/lib/utils/url-parser";
-import { fetchYouTubeMeta } from "@/lib/utils/youtube-meta";
-import { runTranscriptionPipeline } from "@/lib/pipeline/transcription-pipeline";
-import { getVideoByExtId, insertVideo } from "@/lib/db/videos";
-import { upsertTranscript } from "@/lib/db/transcripts";
+import { redirect } from 'next/navigation';
+import { parseVideoUrl } from '@/lib/utils/url-parser';
+import { fetchYouTubeMeta } from '@/lib/utils/youtube-meta';
+import { runTranscriptionPipeline } from '@/lib/pipeline/transcription-pipeline';
+import { getVideoByExtId, insertVideo } from '@/lib/db/videos';
+import { upsertTranscript } from '@/lib/db/transcripts';
 
 export interface ImportVideoState {
-  error?: string;   // i18n key, e.g. "invalidUrl" — mapped to t() in the form
-  field?: "url";
+  error?: string; // i18n key, e.g. "invalidUrl" — mapped to t() in the form
+  field?: 'url';
 }
 
 /**
@@ -25,17 +25,17 @@ export interface ImportVideoState {
 export async function importVideo(
   locale: string,
   _prevState: ImportVideoState,
-  formData: FormData
+  formData: FormData,
 ): Promise<ImportVideoState> {
-  const url = formData.get("url")?.toString().trim() ?? "";
+  const url = formData.get('url')?.toString().trim() ?? '';
 
   // ── 1. Validate URL ────────────────────────────────────────────────────────
   const parsed = parseVideoUrl(url);
   if (!parsed) {
-    return { error: "invalidUrl", field: "url" };
+    return { error: 'invalidUrl', field: 'url' };
   }
-  if (parsed.source === "bilibili") {
-    return { error: "bilibiliUnsupported", field: "url" };
+  if (parsed.source === 'bilibili') {
+    return { error: 'bilibiliUnsupported', field: 'url' };
   }
 
   const { videoId, source } = parsed;
@@ -50,12 +50,12 @@ export async function importVideo(
   // ── 3. Fetch metadata + subtitles in parallel ──────────────────────────────
   const [meta, transcriptResult] = await Promise.all([
     fetchYouTubeMeta(videoId),
-    runTranscriptionPipeline(source, videoId, "en"),
+    runTranscriptionPipeline(source, videoId, 'en'),
   ]);
 
   // ── 4. No subtitles → return error, don't persist ─────────────────────────
-  if (transcriptResult.source === "failed" || transcriptResult.segments.length === 0) {
-    return { error: "noSubtitles", field: "url" };
+  if (transcriptResult.source === 'failed' || transcriptResult.segments.length === 0) {
+    return { error: 'noSubtitles', field: 'url' };
   }
 
   // ── 5. Persist video ───────────────────────────────────────────────────────
@@ -67,19 +67,14 @@ export async function importVideo(
       title: meta.title || null,
       channel_name: meta.channelName || null,
       thumbnail_url: meta.thumbnailUrl || null,
-      language: "en",
+      language: 'en',
     });
   } catch {
-    return { error: "saveFailed" };
+    return { error: 'saveFailed' };
   }
 
   // ── 5b. Persist transcript (upsert — pipeline may have already cached it) ──
-  await upsertTranscript(
-    videoId,
-    "en",
-    transcriptResult.source,
-    transcriptResult.segments
-  );
+  await upsertTranscript(videoId, 'en', transcriptResult.source, transcriptResult.segments);
 
   // ── 6. Redirect to study page ─────────────────────────────────────────────
   redirect(`/${locale}/video/${videoId}`);

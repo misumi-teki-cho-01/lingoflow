@@ -1,24 +1,24 @@
-"use client";
+'use client';
 
-import { useActionState, useEffect, useRef } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { importVideo, type ImportVideoState } from "@/app/actions/import-video";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Loader2, ArrowRight } from "lucide-react";
+import { useActionState, useEffect, useRef } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import { importVideo, type ImportVideoState } from '@/app/actions/import-video';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Loader2, ArrowRight } from 'lucide-react';
 
 const INITIAL_STATE: ImportVideoState = {};
 
 export function VideoImportForm() {
-  const t = useTranslations("dashboard");
+  const t = useTranslations('dashboard');
   const locale = useLocale();
 
   // Server Action error codes → i18n strings
   const ERROR_MESSAGES: Record<string, string> = {
-    invalidUrl: t("errorInvalidUrl"),
-    bilibiliUnsupported: t("errorBilibiliUnsupported"),
-    noSubtitles: t("errorNoSubtitles"),
-    saveFailed: t("errorSaveFailed"),
+    invalidUrl: t('errorInvalidUrl'),
+    bilibiliUnsupported: t('errorBilibiliUnsupported'),
+    noSubtitles: t('errorNoSubtitles'),
+    saveFailed: t('errorSaveFailed'),
   };
 
   // Bind locale into the server action
@@ -27,7 +27,9 @@ export function VideoImportForm() {
 
   // Auto-focus input on mount
   const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   return (
     <form action={action} className="w-full max-w-2xl">
@@ -37,9 +39,9 @@ export function VideoImportForm() {
             ref={inputRef}
             name="url"
             type="url"
-            placeholder={t("urlPlaceholder")}
+            placeholder={t('urlPlaceholder')}
             disabled={isPending}
-            className={`h-11 pr-4 ${state.error ? "border-destructive ring-destructive/20" : ""}`}
+            className={`h-11 pr-4 ${state.error ? 'border-destructive ring-destructive/20' : ''}`}
             autoComplete="off"
           />
         </div>
@@ -47,12 +49,12 @@ export function VideoImportForm() {
           {isPending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              {t("importing")}
+              {t('importing')}
             </>
           ) : (
             <>
               <ArrowRight className="h-4 w-4" />
-              {t("importVideo")}
+              {t('importVideo')}
             </>
           )}
         </Button>
@@ -65,11 +67,10 @@ export function VideoImportForm() {
         </p>
       )}
 
-
       {/* Loading hint */}
       {isPending && (
         <p className="mt-2 text-sm text-muted-foreground animate-in fade-in">
-          {t("importingHint")}
+          {t('importingHint')}
         </p>
       )}
     </form>

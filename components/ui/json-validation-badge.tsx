@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import type { JsonValidationState } from "@/hooks/use-json-validation";
+import { AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { JsonValidationState } from '@/hooks/use-json-validation';
 
 interface JsonValidationBadgeProps {
   validation: JsonValidationState;
@@ -10,18 +10,14 @@ interface JsonValidationBadgeProps {
   validLabel?: string;
 }
 
-export function JsonValidationBadge({
-  validation,
-  onJump,
-  validLabel,
-}: JsonValidationBadgeProps) {
-  if (validation.status === "idle") return null;
+export function JsonValidationBadge({ validation, onJump, validLabel }: JsonValidationBadgeProps) {
+  if (validation.status === 'idle') return null;
 
-  if (validation.status === "valid") {
+  if (validation.status === 'valid') {
     return (
       <div className="flex items-center gap-1.5 text-xs text-emerald-600">
         <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-        <span>{validLabel ?? "JSON 格式正确"}</span>
+        <span>{validLabel ?? 'JSON 格式正确'}</span>
       </div>
     );
   }
@@ -37,7 +33,7 @@ export function JsonValidationBadge({
       <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
       <div className="flex-1 min-w-0">
         {location && <span className="font-medium">{location} — </span>}
-        <span className="break-all">{validation.errorMessage ?? "JSON 格式错误"}</span>
+        <span className="break-all">{validation.errorMessage ?? 'JSON 格式错误'}</span>
       </div>
       {validation.errorLine != null && (
         <Button

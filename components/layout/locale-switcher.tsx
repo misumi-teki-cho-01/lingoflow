@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useLocale } from "next-intl";
-import { usePathname, useRouter } from "@/i18n/navigation";
-import { locales, type Locale } from "@/i18n/config";
+import { useLocale } from 'next-intl';
+import { usePathname, useRouter } from '@/i18n/navigation';
+import { locales, type Locale } from '@/i18n/config';
 
 const localeLabels: Record<Locale, string> = {
-  en: "English",
-  zh: "中文",
-  ja: "日本語",
+  en: 'English',
+  zh: '中文',
+  ja: '日本語',
 };
 
 export function LocaleSwitcher() {

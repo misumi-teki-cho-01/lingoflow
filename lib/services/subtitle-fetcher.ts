@@ -1,10 +1,10 @@
-import { YoutubeTranscript, type TranscriptResponse } from "youtube-transcript";
-import type { TranscriptSegment } from "@/types/transcript";
-import type { VideoSourceType } from "@/types/video";
+import { YoutubeTranscript, type TranscriptResponse } from 'youtube-transcript';
+import type { TranscriptSegment } from '@/types/transcript';
+import type { VideoSourceType } from '@/types/video';
 
 export interface SubtitleFetchResult {
   segments: TranscriptSegment[];
-  source: "manual" | "auto-generated" | "none";
+  source: 'manual' | 'auto-generated' | 'none';
   language: string;
 }
 
@@ -30,10 +30,10 @@ function decodeHtmlEntities(text: string): string {
   return text
     .replace(/&#39;/g, "'")
     .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\n/g, " ");
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n/g, ' ');
 }
 
 /**
@@ -42,7 +42,7 @@ function decodeHtmlEntities(text: string): string {
  */
 export async function fetchYouTubeSubtitles(
   videoId: string,
-  preferredLang: string = "en",
+  preferredLang: string = 'en',
 ): Promise<SubtitleFetchResult> {
   // Attempt 1: Fetch manual subtitles in preferred language
   try {
@@ -53,7 +53,7 @@ export async function fetchYouTubeSubtitles(
     if (transcript.length > 0) {
       return {
         segments: toSegments(transcript),
-        source: transcript[0].lang ? "manual" : "auto-generated",
+        source: transcript[0].lang ? 'manual' : 'auto-generated',
         language: preferredLang,
       };
     }
@@ -68,15 +68,15 @@ export async function fetchYouTubeSubtitles(
     if (transcript.length > 0) {
       return {
         segments: toSegments(transcript),
-        source: "auto-generated",
-        language: "en",
+        source: 'auto-generated',
+        language: 'en',
       };
     }
   } catch {
     // No subtitles available at all
   }
 
-  return { segments: [], source: "none", language: preferredLang };
+  return { segments: [], source: 'none', language: preferredLang };
 }
 
 /**
@@ -86,15 +86,15 @@ export async function fetchYouTubeSubtitles(
 export async function fetchSubtitles(
   sourceType: VideoSourceType,
   videoId: string,
-  preferredLang: string = "en",
+  preferredLang: string = 'en',
 ): Promise<SubtitleFetchResult> {
   switch (sourceType) {
-    case "youtube":
+    case 'youtube':
       return fetchYouTubeSubtitles(videoId, preferredLang);
-    case "bilibili":
+    case 'bilibili':
       // TODO: Phase 5 — Bilibili subtitle extraction
-      return { segments: [], source: "none", language: preferredLang };
+      return { segments: [], source: 'none', language: preferredLang };
     default:
-      return { segments: [], source: "none", language: preferredLang };
+      return { segments: [], source: 'none', language: preferredLang };
   }
 }

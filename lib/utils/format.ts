@@ -7,7 +7,7 @@ export function formatTime(totalSeconds: number): string {
   const minutes = Math.floor((rounded % 3600) / 60);
   const seconds = rounded % 60;
 
-  const pad = (n: number) => n.toString().padStart(2, "0");
+  const pad = (n: number) => n.toString().padStart(2, '0');
 
   if (hours > 0) {
     return `${hours}:${pad(minutes)}:${pad(seconds)}`;
@@ -20,7 +20,7 @@ export function formatTime(totalSeconds: number): string {
  */
 export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength - 1) + "…";
+  return text.slice(0, maxLength - 1) + '…';
 }
 
 /**
@@ -28,7 +28,7 @@ export function truncate(text: string, maxLength: number): string {
  * strips leading/trailing punctuation and converts to lowercase.
  */
 export function normalizeWord(raw: string): string {
-  return raw.replace(/^[.,!?;:'"()[\]{}<>]+|[.,!?;:'"()[\]{}<>]+$/g, "").toLowerCase();
+  return raw.replace(/^[.,!?;:'"()[\]{}<>]+|[.,!?;:'"()[\]{}<>]+$/g, '').toLowerCase();
 }
 
 /**
@@ -36,5 +36,5 @@ export function normalizeWord(raw: string): string {
  * Used when building display text for CC selections.
  */
 export function stripPunctuation(raw: string): string {
-  return raw.replace(/^[.,!?;:'"()[\]{}<>]+|[.,!?;:'"()[\]{}<>]+$/g, "");
+  return raw.replace(/^[.,!?;:'"()[\]{}<>]+|[.,!?;:'"()[\]{}<>]+$/g, '');
 }

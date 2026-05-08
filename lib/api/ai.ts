@@ -1,16 +1,20 @@
-import type { TranscriptSegment } from "@/types/transcript";
-import type { VocabularyExplanation } from "@/lib/ai/services";
-import type { CcSelection } from "@/types/transcript";
+import type { TranscriptSegment } from '@/types/transcript';
+import type { VocabularyExplanation } from '@/lib/ai/services';
+import type { CcSelection } from '@/types/transcript';
 
-export async function fetchAIExplanations(mdText: string, wordsToExplain: string[], locale: string): Promise<Record<string, VocabularyExplanation>> {
-  const res = await fetch("/api/ai/explain", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: mdText, wordsToExplain, locale })
+export async function fetchAIExplanations(
+  mdText: string,
+  wordsToExplain: string[],
+  locale: string,
+): Promise<Record<string, VocabularyExplanation>> {
+  const res = await fetch('/api/ai/explain', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: mdText, wordsToExplain, locale }),
   });
-  
+
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to fetch AI definitions");
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch AI definitions');
 
   return data.definitions || {};
 }
@@ -19,26 +23,26 @@ export async function saveVocabularyToDB(
   videoId: string,
   definitions: Record<string, VocabularyExplanation>,
   options?: {
-    sourceMode?: "cc" | "scribe";
+    sourceMode?: 'cc' | 'scribe';
     ccSelections?: CcSelection[];
     dictation?: {
       contentHtml: string;
       segments: TranscriptSegment[];
     };
-  }
+  },
 ): Promise<void> {
-  const res = await fetch("/api/vocabulary/save", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const res = await fetch('/api/vocabulary/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       videoId,
       definitions,
-      sourceMode: options?.sourceMode ?? "scribe",
+      sourceMode: options?.sourceMode ?? 'scribe',
       ccSelections: options?.ccSelections ?? [],
       dictation: options?.dictation ?? null,
-    })
+    }),
   });
-  
+
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to save vocabulary");
+  if (!res.ok) throw new Error(data.error || 'Failed to save vocabulary');
 }

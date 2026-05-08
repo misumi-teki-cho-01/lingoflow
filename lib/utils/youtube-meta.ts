@@ -5,9 +5,9 @@ export interface YouTubeMeta {
 }
 
 const FALLBACK: YouTubeMeta = {
-  title: "",
-  channelName: "",
-  thumbnailUrl: "",
+  title: '',
+  channelName: '',
+  thumbnailUrl: '',
 };
 
 /**
@@ -23,9 +23,9 @@ export async function fetchYouTubeMeta(videoId: string): Promise<YouTubeMeta> {
 
     const data = await res.json();
     return {
-      title: data.title ?? "",
-      channelName: data.author_name ?? "",
-      thumbnailUrl: data.thumbnail_url ?? "",
+      title: data.title ?? '',
+      channelName: data.author_name ?? '',
+      thumbnailUrl: data.thumbnail_url ?? '',
     };
   } catch {
     return FALLBACK;

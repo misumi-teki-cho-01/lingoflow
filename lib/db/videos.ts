@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
 export interface VideoInsertData {
   url: string;
-  source_type: "youtube" | "bilibili";
+  source_type: 'youtube' | 'bilibili';
   video_ext_id: string;
   title: string | null;
   channel_name: string | null;
@@ -17,9 +17,9 @@ export async function getVideoByExtId(videoExtId: string) {
   try {
     const supabase = await createClient();
     const { data } = await supabase
-      .from("videos")
-      .select("*")
-      .eq("video_ext_id", videoExtId)
+      .from('videos')
+      .select('*')
+      .eq('video_ext_id', videoExtId)
       .single();
     return data;
   } catch {
@@ -35,9 +35,9 @@ export async function getRecentVideos(limit: number = 24, offset: number = 0) {
   try {
     const supabase = await createClient();
     const { data } = await supabase
-      .from("videos")
-      .select("video_ext_id, title, channel_name, thumbnail_url, duration, source_type, created_at")
-      .order("created_at", { ascending: false })
+      .from('videos')
+      .select('video_ext_id, title, channel_name, thumbnail_url, duration, source_type, created_at')
+      .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     return data || [];
   } catch {
@@ -51,7 +51,7 @@ export async function getRecentVideos(limit: number = 24, offset: number = 0) {
 export async function insertVideo(videoData: VideoInsertData) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("videos")
+    .from('videos')
     .insert({
       url: videoData.url,
       source_type: videoData.source_type,
@@ -59,9 +59,9 @@ export async function insertVideo(videoData: VideoInsertData) {
       title: videoData.title,
       channel_name: videoData.channel_name,
       thumbnail_url: videoData.thumbnail_url,
-      language: videoData.language || "en",
+      language: videoData.language || 'en',
     })
-    .select("id")
+    .select('id')
     .single();
 
   if (error) {

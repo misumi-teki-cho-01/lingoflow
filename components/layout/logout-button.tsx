@@ -1,12 +1,12 @@
-"use client";
-import { useRouter } from "@/i18n/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { useTranslations } from "next-intl";
+'use client';
+import { useRouter } from '@/i18n/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 
 export function LogoutButton() {
   const router = useRouter();
-  const t = useTranslations("nav");
+  const t = useTranslations('nav');
 
   async function handleLogout() {
     const supabase = createClient();
@@ -17,7 +17,7 @@ export function LogoutButton() {
 
   return (
     <Button variant="ghost" size="sm" onClick={handleLogout}>
-      {t("logout")}
+      {t('logout')}
     </Button>
   );
 }

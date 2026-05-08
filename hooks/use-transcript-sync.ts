@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import type { TranscriptSegment } from "@/types/transcript";
+import { useMemo } from 'react';
+import type { TranscriptSegment } from '@/types/transcript';
 
 interface TranscriptSyncResult {
   activeSegmentIndex: number;
@@ -12,10 +12,7 @@ interface TranscriptSyncResult {
  * Binary search to find the active transcript segment for a given time.
  * Segments must be sorted by start_time (ascending).
  */
-function findActiveSegment(
-  segments: TranscriptSegment[],
-  currentTime: number,
-): number {
+function findActiveSegment(segments: TranscriptSegment[], currentTime: number): number {
   if (segments.length === 0) return -1;
 
   let low = 0;

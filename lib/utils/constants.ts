@@ -17,4 +17,4 @@ export const PAUSE_DEBOUNCE_MS = 300;
 export const AUTO_RESUME_DELAY_MS = 500;
 
 /** Supported video sources */
-export const SUPPORTED_SOURCES = ["youtube", "bilibili"] as const;
+export const SUPPORTED_SOURCES = ['youtube', 'bilibili'] as const;

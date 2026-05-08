@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-export type JsonValidationMode = "segments" | "vocabulary";
+export type JsonValidationMode = 'segments' | 'vocabulary';
 
-export type JsonValidationStatus = "idle" | "valid" | "invalid";
+export type JsonValidationStatus = 'idle' | 'valid' | 'invalid';
 
 export interface JsonValidationState {
   status: JsonValidationStatus;
@@ -27,7 +27,7 @@ interface ValidationSnapshot {
 }
 
 const EMPTY_VALIDATION_STATE: ValidationSnapshot = {
-  status: "idle",
+  status: 'idle',
   errorLine: null,
   errorCol: null,
   errorMessage: null,
@@ -46,7 +46,7 @@ const EMPTY_VALIDATION_STATE: ValidationSnapshot = {
  * or end-of-input. Any other `"` is an unescaped inner quote → escape it.
  */
 function fixUnescapedQuotes(text: string): string {
-  let result = "";
+  let result = '';
   let inString = false;
   let i = 0;
 
@@ -54,9 +54,9 @@ function fixUnescapedQuotes(text: string): string {
     const ch = text[i];
 
     if (inString) {
-      if (ch === "\\") {
+      if (ch === '\\') {
         // Escape sequence — copy both chars verbatim
-        result += ch + (text[i + 1] ?? "");
+        result += ch + (text[i + 1] ?? '');
         i += 2;
         continue;
       } else if (ch === '"') {
@@ -65,11 +65,7 @@ function fixUnescapedQuotes(text: string): string {
         while (j < text.length && /\s/.test(text[j])) j++;
         const next = text[j];
         const isClosing =
-          next === ":" ||
-          next === "," ||
-          next === "}" ||
-          next === "]" ||
-          j >= text.length;
+          next === ':' || next === ',' || next === '}' || next === ']' || j >= text.length;
 
         if (isClosing) {
           inString = false;
@@ -123,7 +119,7 @@ function extractErrorLocation(text: string, error: SyntaxError): ErrorLocation |
   if (posMatch) {
     const charPos = parseInt(posMatch[1]);
     const before = text.slice(0, charPos);
-    const lines = before.split("\n");
+    const lines = before.split('\n');
     return {
       charPos,
       line: lines.length,
@@ -137,7 +133,7 @@ function extractErrorLocation(text: string, error: SyntaxError): ErrorLocation |
     const line = parseInt(lineColMatch[1]);
     const col = parseInt(lineColMatch[2]);
     // Reconstruct charPos from line/col
-    const lines = text.split("\n");
+    const lines = text.split('\n');
     let charPos = 0;
     for (let i = 0; i < line - 1 && i < lines.length; i++) {
       charPos += lines[i].length + 1; // +1 for \n
@@ -150,20 +146,20 @@ function extractErrorLocation(text: string, error: SyntaxError): ErrorLocation |
 }
 
 function countItems(parsed: unknown, mode: JsonValidationMode): number | null {
-  if (mode === "segments") {
+  if (mode === 'segments') {
     if (!Array.isArray(parsed)) return null;
     return parsed.length;
   }
   // vocabulary: object or array
   if (Array.isArray(parsed)) return parsed.length;
-  if (parsed && typeof parsed === "object") return Object.keys(parsed).length;
+  if (parsed && typeof parsed === 'object') return Object.keys(parsed).length;
   return null;
 }
 
 export function useJsonValidation(
   text: string,
   mode: JsonValidationMode,
-  debounceMs = 400
+  debounceMs = 400,
 ): JsonValidationState {
   const [validation, setValidation] = useState<ValidationSnapshot>(EMPTY_VALIDATION_STATE);
   const errorCharPosRef = useRef<number | null>(null);
@@ -183,7 +179,7 @@ export function useJsonValidation(
         const parsed = JSON.parse(text);
         const count = countItems(parsed, mode);
         setValidation({
-          status: "valid",
+          status: 'valid',
           errorLine: null,
           errorCol: null,
           errorMessage: null,
@@ -201,7 +197,7 @@ export function useJsonValidation(
             const parsedFixed = JSON.parse(fixed);
             const count = countItems(parsedFixed, mode);
             setValidation({
-              status: "valid",
+              status: 'valid',
               errorLine: null,
               errorCol: null,
               errorMessage: null,
@@ -219,11 +215,11 @@ export function useJsonValidation(
         const loc = extractErrorLocation(text, err);
         // Simplify the error message for display
         const raw = err.message
-          .replace(/^JSON\.parse:\s*/i, "")
-          .replace(/\s*at position \d+/i, "")
-          .replace(/\s*in JSON\s*/i, "");
+          .replace(/^JSON\.parse:\s*/i, '')
+          .replace(/\s*at position \d+/i, '')
+          .replace(/\s*in JSON\s*/i, '');
         setValidation({
-          status: "invalid",
+          status: 'invalid',
           errorLine: loc?.line ?? null,
           errorCol: loc?.col ?? null,
           errorMessage: raw,
@@ -250,7 +246,7 @@ export function useJsonValidation(
 
     // Scroll the textarea so the selection is visible
     // We do this by temporarily measuring line height
-    const lines = textareaEl.value.slice(0, start).split("\n");
+    const lines = textareaEl.value.slice(0, start).split('\n');
     const lineHeight = parseInt(getComputedStyle(textareaEl).lineHeight) || 20;
     textareaEl.scrollTop = Math.max(0, (lines.length - 3) * lineHeight);
   }, []);

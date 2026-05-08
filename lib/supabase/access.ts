@@ -1,6 +1,6 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export interface DbAccess {
   db: SupabaseClient;
@@ -16,8 +16,8 @@ export async function getDbAccess(): Promise<DbAccess | null> {
     error,
   } = await supabase.auth.getUser();
 
-  if (error && error.message !== "Auth session missing!") {
-    console.warn("[Supabase] Failed to resolve authenticated user:", error.message);
+  if (error && error.message !== 'Auth session missing!') {
+    console.warn('[Supabase] Failed to resolve authenticated user:', error.message);
   }
 
   if (user) {

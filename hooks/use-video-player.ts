@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
-import type { RefObject } from "react";
-import type { PlayerState, VideoProvider } from "@/types/video";
-import { createVideoProvider, detectVideoSource } from "@/lib/video-providers";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
+import type { RefObject } from 'react';
+import type { PlayerState, VideoProvider } from '@/types/video';
+import { createVideoProvider, detectVideoSource } from '@/lib/video-providers';
 import {
   DEFAULT_REWIND_DURATION,
   PAUSE_DEBOUNCE_MS,
   AUTO_RESUME_DELAY_MS,
-} from "@/lib/utils/constants";
+} from '@/lib/utils/constants';
 
 export interface UseVideoPlayerOptions {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -50,7 +50,7 @@ export function useVideoPlayer({
 }: UseVideoPlayerOptions): UseVideoPlayerReturn {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [playerState, setPlayerState] = useState<PlayerState>("unstarted");
+  const [playerState, setPlayerState] = useState<PlayerState>('unstarted');
   const [isReady, setIsReady] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isShadowMode, setShadowMode] = useState(false);
@@ -79,18 +79,18 @@ export function useVideoPlayer({
     const provider = createVideoProvider(parsed.source);
     providerRef.current = provider;
 
-    provider.on("ready", () => {
+    provider.on('ready', () => {
       setIsReady(true);
       setDuration(provider.getDuration());
     });
 
-    provider.on("timeUpdate", (time) => {
+    provider.on('timeUpdate', (time) => {
       const t = time as number;
       setCurrentTime(t);
       handleTimeUpdate(t);
     });
 
-    provider.on("stateChange", (state) => {
+    provider.on('stateChange', (state) => {
       const s = state as PlayerState;
       setPlayerState(s);
       handleStateChange(s);
@@ -114,12 +114,12 @@ export function useVideoPlayer({
     const handleStateForShadow = (state: unknown) => {
       const s = state as PlayerState;
 
-      if (s === "playing") {
+      if (s === 'playing') {
         lastPlayTimestamp.current = Date.now();
         isRewinding.current = false;
       }
 
-      if (s === "paused") {
+      if (s === 'paused') {
         // Guard 1: ignore programmatic pauses from our own seekTo
         if (isProgrammaticPause.current) {
           isProgrammaticPause.current = false;
@@ -149,8 +149,8 @@ export function useVideoPlayer({
       }
     };
 
-    provider.on("stateChange", handleStateForShadow);
-    return () => provider.off("stateChange", handleStateForShadow);
+    provider.on('stateChange', handleStateForShadow);
+    return () => provider.off('stateChange', handleStateForShadow);
   }, [isShadowMode, rewindDuration, autoResumeAfterRewind]);
 
   const play = useCallback(() => providerRef.current?.play(), []);
@@ -180,7 +180,7 @@ export function useVideoPlayer({
     provider.seekTo(target);
   }, []);
   const togglePlay = useCallback(() => {
-    if (playerState === "playing") {
+    if (playerState === 'playing') {
       providerRef.current?.pause();
     } else {
       providerRef.current?.play();

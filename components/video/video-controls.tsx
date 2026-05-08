@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Play, Pause, Volume2, VolumeX, Rewind, FastForward } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { formatTime } from "@/lib/utils/format";
-import type { UseVideoPlayerReturn } from "@/hooks/use-video-player";
+import { useState, useEffect } from 'react';
+import { Play, Pause, Volume2, VolumeX, Rewind, FastForward } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { formatTime } from '@/lib/utils/format';
+import type { UseVideoPlayerReturn } from '@/hooks/use-video-player';
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -29,8 +29,8 @@ export function VideoControls({ player }: VideoControlsProps) {
   } = player;
 
   const [seekStep, setSeekStep] = useState(() => {
-    if (typeof window === "undefined") return 5;
-    const saved = window.localStorage.getItem("lingoflow-seek-step");
+    if (typeof window === 'undefined') return 5;
+    const saved = window.localStorage.getItem('lingoflow-seek-step');
     const parsed = saved ? Number(saved) : NaN;
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
   });
@@ -41,7 +41,7 @@ export function VideoControls({ player }: VideoControlsProps) {
   const handleSeekStepChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = Number(e.target.value);
     setSeekStep(val);
-    localStorage.setItem("lingoflow-seek-step", String(val));
+    localStorage.setItem('lingoflow-seek-step', String(val));
   };
 
   useEffect(() => {
@@ -54,8 +54,8 @@ export function VideoControls({ player }: VideoControlsProps) {
       const hasModifier = e.altKey || e.ctrlKey || e.metaKey;
 
       // Strict physical key detection bypassing Mac weird character maps
-      const isJ = e.code === "KeyJ" || e.key.toLowerCase() === "j" || e.key === "∆";
-      const isL = e.code === "KeyL" || e.key.toLowerCase() === "l" || e.key === "¬";
+      const isJ = e.code === 'KeyJ' || e.key.toLowerCase() === 'j' || e.key === '∆';
+      const isL = e.code === 'KeyL' || e.key.toLowerCase() === 'l' || e.key === '¬';
 
       if (hasModifier && isJ) {
         e.preventDefault();
@@ -75,15 +75,15 @@ export function VideoControls({ player }: VideoControlsProps) {
 
       // Don't intercept naked arrows/space if user is typing
       if (
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
         target?.isContentEditable
       ) {
         return;
       }
 
       // 3. Spacebar to toggle Play/Pause
-      if (e.code === "Space" && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+      if (e.code === 'Space' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         e.stopPropagation();
         togglePlay();
@@ -92,11 +92,11 @@ export function VideoControls({ player }: VideoControlsProps) {
 
       // 2. Naked Arrow keys (no modifiers), ONLY intercepted when NOT typing
       if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
-        if (e.key === "ArrowLeft") {
+        if (e.key === 'ArrowLeft') {
           e.preventDefault();
           e.stopPropagation();
           seekBy(-seekStep);
-        } else if (e.key === "ArrowRight") {
+        } else if (e.key === 'ArrowRight') {
           e.preventDefault();
           e.stopPropagation();
           seekBy(seekStep);
@@ -105,11 +105,11 @@ export function VideoControls({ player }: VideoControlsProps) {
     };
 
     // Use capture phase (true) to intercept the key BEFORE TipTap's contenteditable receives it!
-    window.addEventListener("keydown", handleGlobalKeyDown, true);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown, true);
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
   }, [seekStep, seekBy, togglePlay]);
 
-  const isPlaying = playerState === "playing";
+  const isPlaying = playerState === 'playing';
   const displayTime = isDragging ? dragValue : currentTime;
   const progress = duration > 0 ? (displayTime / duration) * 100 : 0;
 
@@ -119,7 +119,7 @@ export function VideoControls({ player }: VideoControlsProps) {
   }
 
   function handleRangeCommit(
-    e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>
+    e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>,
   ) {
     const val = Number((e.target as HTMLInputElement).value);
     seekTo(val);
@@ -149,9 +149,9 @@ export function VideoControls({ player }: VideoControlsProps) {
           onTouchEnd={handleRangeCommit}
           onKeyDown={(e) => {
             // Override native step (0.1 s) so arrow keys use the user-defined seekStep
-            if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
               e.preventDefault();
-              seekBy(e.key === "ArrowLeft" ? -seekStep : seekStep);
+              seekBy(e.key === 'ArrowLeft' ? -seekStep : seekStep);
             }
           }}
           className="flex-1 h-1.5 cursor-pointer appearance-none rounded-full disabled:opacity-40"
@@ -171,7 +171,7 @@ export function VideoControls({ player }: VideoControlsProps) {
           disabled={!isReady}
           onClick={isPlaying ? pause : play}
           className="h-8 w-8"
-          aria-label={isPlaying ? "Pause" : "Play"}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
         </Button>
@@ -183,7 +183,7 @@ export function VideoControls({ player }: VideoControlsProps) {
           disabled={!isReady}
           onClick={toggleMute}
           className="h-8 w-8"
-          aria-label={isMuted ? "Unmute" : "Mute"}
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
         >
           {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </Button>
@@ -200,7 +200,9 @@ export function VideoControls({ player }: VideoControlsProps) {
             title="Fast-forward/Rewind duration"
           >
             {Array.from({ length: 10 }, (_, i) => i + 1).map((s) => (
-              <option key={s} value={s}>±{s}s</option>
+              <option key={s} value={s}>
+                ±{s}s
+              </option>
             ))}
           </select>
 

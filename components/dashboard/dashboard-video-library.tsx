@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
-import { Search, LayoutGrid, List, Play, Tv2, Loader2 } from "lucide-react";
-import { VideoCard, type VideoCardData } from "@/components/video/video-card";
-import { fetchVideosPage } from "@/app/actions/videos";
+import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { Search, LayoutGrid, List, Play, Tv2, Loader2 } from 'lucide-react';
+import { VideoCard, type VideoCardData } from '@/components/video/video-card';
+import { fetchVideosPage } from '@/app/actions/videos';
 
 const PAGE_SIZE = 24;
 
@@ -13,7 +13,7 @@ interface DashboardVideoLibraryProps {
 }
 
 export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoLibraryProps) {
-  const t = useTranslations("dashboard");
+  const t = useTranslations('dashboard');
 
   // Accumulated videos across pages
   const [allVideos, setAllVideos] = useState<VideoCardData[]>(initialVideos);
@@ -23,17 +23,17 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   // This avoids showing "All videos loaded" to users whose library fits in one page.
   const [hasEverLoadedMore, setHasEverLoadedMore] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "channels">(() => {
-    if (typeof window === "undefined") return "grid";
-    const saved = localStorage.getItem("dashboard-view-mode");
-    return saved === "grid" || saved === "channels" ? saved : "grid";
+  const [viewMode, setViewMode] = useState<'grid' | 'channels'>(() => {
+    if (typeof window === 'undefined') return 'grid';
+    const saved = localStorage.getItem('dashboard-view-mode');
+    return saved === 'grid' || saved === 'channels' ? saved : 'grid';
   });
 
-  const handleViewMode = (mode: "grid" | "channels") => {
+  const handleViewMode = (mode: 'grid' | 'channels') => {
     setViewMode(mode);
-    localStorage.setItem("dashboard-view-mode", mode);
+    localStorage.setItem('dashboard-view-mode', mode);
   };
 
   const handleLoadMore = async () => {
@@ -52,7 +52,7 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   const channels = useMemo(() => {
     const counts = new Map<string, number>();
     allVideos.forEach((v) => {
-      const ch = v.channel_name ?? "—";
+      const ch = v.channel_name ?? '—';
       counts.set(ch, (counts.get(ch) ?? 0) + 1);
     });
     return Array.from(counts.entries())
@@ -64,16 +64,12 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   const filteredVideos = useMemo(() => {
     let result = allVideos;
     if (selectedChannel) {
-      result = result.filter(
-        (v) => (v.channel_name ?? "—") === selectedChannel
-      );
+      result = result.filter((v) => (v.channel_name ?? '—') === selectedChannel);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
-        (v) =>
-          v.title?.toLowerCase().includes(q) ||
-          v.channel_name?.toLowerCase().includes(q)
+        (v) => v.title?.toLowerCase().includes(q) || v.channel_name?.toLowerCase().includes(q),
       );
     }
     return result;
@@ -83,7 +79,7 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   const groupedByChannel = useMemo(() => {
     const groups = new Map<string, VideoCardData[]>();
     filteredVideos.forEach((v) => {
-      const ch = v.channel_name ?? "—";
+      const ch = v.channel_name ?? '—';
       if (!groups.has(ch)) groups.set(ch, []);
       groups.get(ch)!.push(v);
     });
@@ -100,14 +96,14 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   // "Load more" footer: show only when not actively filtering/searching
   // (search/channel filter work on loaded data — loading more only makes sense
   // when browsing all videos)
-  const isFiltering = !!selectedChannel || searchQuery.trim() !== "";
+  const isFiltering = !!selectedChannel || searchQuery.trim() !== '';
 
   return (
     <section>
       {/* Section header */}
       <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-4">
         <Tv2 className="h-4 w-4" />
-        {t("recentImports")}
+        {t('recentImports')}
       </h2>
 
       {allVideos.length === 0 ? (
@@ -116,8 +112,8 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
           <div className="rounded-full bg-muted p-6 mb-4">
             <Play className="h-8 w-8 opacity-30" />
           </div>
-          <p className="font-medium">{t("noVideos")}</p>
-          <p className="text-sm mt-1 opacity-60">{t("noVideosHint")}</p>
+          <p className="font-medium">{t('noVideos')}</p>
+          <p className="text-sm mt-1 opacity-60">{t('noVideosHint')}</p>
         </div>
       ) : (
         <>
@@ -130,7 +126,7 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t("searchPlaceholder")}
+                placeholder={t('searchPlaceholder')}
                 className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
               />
             </div>
@@ -138,23 +134,23 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
             {/* View mode toggle */}
             <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-background shrink-0">
               <button
-                onClick={() => handleViewMode("grid")}
-                title={t("viewGrid")}
+                onClick={() => handleViewMode('grid')}
+                title={t('viewGrid')}
                 className={`p-1.5 rounded-md transition-colors ${
-                  viewMode === "grid"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  viewMode === 'grid'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
               <button
-                onClick={() => handleViewMode("channels")}
-                title={t("viewChannels")}
+                onClick={() => handleViewMode('channels')}
+                title={t('viewChannels')}
                 className={`p-1.5 rounded-md transition-colors ${
-                  viewMode === "channels"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  viewMode === 'channels'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <List className="h-4 w-4" />
@@ -170,16 +166,16 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
                 onClick={() => setSelectedChannel(null)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
                   selectedChannel === null
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground bg-background"
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground bg-background'
                 }`}
               >
-                {t("allChannels")}
+                {t('allChannels')}
                 <span
                   className={`inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold ${
                     selectedChannel === null
-                      ? "bg-primary-foreground/20 text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
+                      ? 'bg-primary-foreground/20 text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {allVideos.length}
@@ -190,21 +186,19 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
               {channels.map(({ name, count }) => (
                 <button
                   key={name}
-                  onClick={() =>
-                    setSelectedChannel((prev) => (prev === name ? null : name))
-                  }
+                  onClick={() => setSelectedChannel((prev) => (prev === name ? null : name))}
                   className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
                     selectedChannel === name
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground bg-background"
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground bg-background'
                   }`}
                 >
                   <span className="max-w-[140px] truncate">{name}</span>
                   <span
                     className={`inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold ${
                       selectedChannel === name
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                        ? 'bg-primary-foreground/20 text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {count}
@@ -220,12 +214,12 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
               <div className="rounded-full bg-muted p-6 mb-4">
                 <Search className="h-8 w-8 opacity-30" />
               </div>
-              <p className="font-medium">{t("noSearchResults")}</p>
+              <p className="font-medium">{t('noSearchResults')}</p>
             </div>
           )}
 
           {/* ── Grid view ── */}
-          {!isEmpty && viewMode === "grid" && (
+          {!isEmpty && viewMode === 'grid' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredVideos.map((video) => (
                 <VideoCard key={video.video_ext_id} video={video} />
@@ -234,22 +228,19 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
           )}
 
           {/* ── Channels view ── */}
-          {!isEmpty && viewMode === "channels" && (
+          {!isEmpty && viewMode === 'channels' && (
             <div className="flex flex-col gap-8">
               {groupedByChannel.map(([channelName, channelVideos]) => (
                 <div key={channelName}>
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                    {t("channelGroup", {
+                    {t('channelGroup', {
                       name: channelName,
                       count: channelVideos.length,
                     })}
                   </h3>
                   <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
                     {channelVideos.map((video) => (
-                      <div
-                        key={video.video_ext_id}
-                        className="w-[240px] shrink-0"
-                      >
+                      <div key={video.video_ext_id} className="w-[240px] shrink-0">
                         <VideoCard video={video} />
                       </div>
                     ))}
@@ -271,16 +262,14 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
                   {loadingMore ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      {t("loadingMore")}
+                      {t('loadingMore')}
                     </>
                   ) : (
-                    t("loadMore")
+                    t('loadMore')
                   )}
                 </button>
               ) : (
-                <p className="text-xs text-muted-foreground/50">
-                  {t("noMoreVideos")}
-                </p>
+                <p className="text-xs text-muted-foreground/50">{t('noMoreVideos')}</p>
               )}
             </div>
           )}

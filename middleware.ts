@@ -10,12 +10,12 @@ export async function middleware(request: NextRequest) {
 
   // Strip locale prefix to determine route type
   const pathWithoutLocale = pathname.replace(/^\/(en|zh|ja)/, '') || '/';
-  const isProtected = ['/dashboard', '/settings', '/video'].some(p =>
-    pathWithoutLocale.startsWith(p)
+  const isProtected = ['/dashboard', '/settings', '/video'].some((p) =>
+    pathWithoutLocale.startsWith(p),
   );
   // Root path ("/") is the login page; also keep /login and /signup as auth routes (they redirect to /)
-  const isAuthRoute = pathWithoutLocale === '/' ||
-    ['/login', '/signup'].some(p => pathWithoutLocale.startsWith(p));
+  const isAuthRoute =
+    pathWithoutLocale === '/' || ['/login', '/signup'].some((p) => pathWithoutLocale.startsWith(p));
 
   // Determine locale for redirect URLs
   const localeMatch = pathname.match(/^\/(en|zh|ja)/);

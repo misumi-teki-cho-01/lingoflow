@@ -2,17 +2,17 @@
  * Minimal ambient type declaration for the `turndown` package.
  * Install @types/turndown for full typings if needed in the future.
  */
-declare module "turndown" {
+declare module 'turndown' {
   interface TurndownOptions {
-    headingStyle?: "setext" | "atx";
+    headingStyle?: 'setext' | 'atx';
     hr?: string;
-    bulletListMarker?: "-" | "+" | "*";
-    codeBlockStyle?: "indented" | "fenced";
+    bulletListMarker?: '-' | '+' | '*';
+    codeBlockStyle?: 'indented' | 'fenced';
     fence?: string;
-    emDelimiter?: "_" | "*";
-    strongDelimiter?: "__" | "**";
-    linkStyle?: "inlined" | "referenced";
-    linkReferenceStyle?: "full" | "collapsed" | "shortcut";
+    emDelimiter?: '_' | '*';
+    strongDelimiter?: '__' | '**';
+    linkStyle?: 'inlined' | 'referenced';
+    linkReferenceStyle?: 'full' | 'collapsed' | 'shortcut';
   }
 
   interface Rule {
@@ -24,9 +24,11 @@ declare module "turndown" {
     constructor(options?: TurndownOptions);
     turndown(input: string | HTMLElement | Document): string;
     addRule(key: string, rule: Rule): this;
-    use(plugin: ((service: TurndownService) => void) | ((service: TurndownService) => void)[]): this;
-    keep(filter: Rule["filter"]): this;
-    remove(filter: Rule["filter"]): this;
+    use(
+      plugin: ((service: TurndownService) => void) | ((service: TurndownService) => void)[],
+    ): this;
+    keep(filter: Rule['filter']): this;
+    remove(filter: Rule['filter']): this;
     escape(str: string): string;
   }
 

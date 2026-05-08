@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import { useRef } from "react";
-import { useTranslations } from "next-intl";
-import { Play } from "lucide-react";
-import { formatTime, stripPunctuation } from "@/lib/utils/format";
-import { DictionaryPopover } from "@/components/scribe/dictionary-popover";
-import { useState } from "react";
-import type { TranscriptSegment, DragState } from "@/types/transcript";
-import type { VocabularyExplanation } from "@/lib/ai/services";
+import { useRef } from 'react';
+import { useTranslations } from 'next-intl';
+import { Play } from 'lucide-react';
+import { formatTime, stripPunctuation } from '@/lib/utils/format';
+import { DictionaryPopover } from '@/components/scribe/dictionary-popover';
+import { useState } from 'react';
+import type { TranscriptSegment, DragState } from '@/types/transcript';
+import type { VocabularyExplanation } from '@/lib/ai/services';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type HintLevel = "none" | "width" | "reveal";
+export type HintLevel = 'none' | 'width' | 'reveal';
 
 type FillToken =
-  | { type: "space"; value: string }
-  | { type: "word"; word: string; suffix: string; wordIdx: number };
+  | { type: 'space'; value: string }
+  | { type: 'word'; word: string; suffix: string; wordIdx: number };
 
 export interface FillSegmentRowProps {
   segment: TranscriptSegment;
@@ -48,17 +48,20 @@ const PUNCT_SUFFIX = /[.,!?;:'"()[\]{}<>]+$/;
 function tokenizeForFill(text: string): FillToken[] {
   let wordIdx = 0;
   return text.split(/(\s+)/).map((token): FillToken => {
-    if (/^\s+$/.test(token)) return { type: "space", value: token };
+    if (/^\s+$/.test(token)) return { type: 'space', value: token };
     const suffixMatch = token.match(PUNCT_SUFFIX);
-    const suffix = suffixMatch?.[0] ?? "";
+    const suffix = suffixMatch?.[0] ?? '';
     const word = suffix ? token.slice(0, -suffix.length) : token;
-    return { type: "word", word, suffix, wordIdx: wordIdx++ };
+    return { type: 'word', word, suffix, wordIdx: wordIdx++ };
   });
 }
 
 /** Strip punctuation, lowercase, trim — for loose answer comparison. */
 function normalise(s: string): string {
-  return s.replace(/[.,!?;:'"()[\]{}<>]+/g, "").toLowerCase().trim();
+  return s
+    .replace(/[.,!?;:'"()[\]{}<>]+/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 function checkAnswer(input: string, original: string): boolean {
@@ -87,12 +90,15 @@ export function FillSegmentRow({
   onDragEnter,
   onDragEnd,
 }: FillSegmentRowProps) {
-  const t = useTranslations("studyRoom");
+  const t = useTranslations('studyRoom');
   const rowRef = useRef<HTMLDivElement>(null);
 
   // Definition popover for this row
   const [popup, setPopup] = useState<{
-    visible: boolean; x: number; y: number; wordData?: VocabularyExplanation;
+    visible: boolean;
+    x: number;
+    y: number;
+    wordData?: VocabularyExplanation;
   }>({ visible: false, x: 0, y: 0 });
 
   const handleDefinitionClick = (cleanWord: string, x: number, y: number) => {
@@ -100,17 +106,18 @@ export function FillSegmentRow({
       onDefinitionClick(cleanWord, x, y);
     } else {
       // Look up by text — works for both position-based and text-based modes
-      const wordData = definitionKeyMap?.get(cleanWord.toLowerCase())
-        ?? (definitionPositionMap
+      const wordData =
+        definitionKeyMap?.get(cleanWord.toLowerCase()) ??
+        (definitionPositionMap
           ? Array.from(definitionPositionMap.values()).find(
-              (d) => d.original_text.toLowerCase() === cleanWord
+              (d) => d.original_text.toLowerCase() === cleanWord,
             )
           : undefined);
       if (!wordData) return;
       setPopup((prev) =>
         prev.visible && prev.wordData === wordData
           ? { ...prev, visible: false }
-          : { visible: true, x, y, wordData }
+          : { visible: true, x, y, wordData },
       );
     }
   };
@@ -123,24 +130,24 @@ export function FillSegmentRow({
   if (definitionPositionMap) {
     // Position-specific: only show indicator at marked word indices
     tokens.forEach((token) => {
-      if (token.type !== "word") return;
+      if (token.type !== 'word') return;
       const posKey = `${index}-${token.wordIdx}`;
       const def = definitionPositionMap.get(posKey);
       if (def) defAtWordIdx.set(token.wordIdx, def);
     });
   } else if (definitionKeyMap && definitionKeyMap.size > 0) {
     const wordTokens = tokens
-      .filter((t): t is Extract<FillToken, { type: "word" }> => t.type === "word")
+      .filter((t): t is Extract<FillToken, { type: 'word' }> => t.type === 'word')
       .map((t) => t.word);
 
     // Pass 1: phrase matches
     definitionKeyMap.forEach((def, phrase) => {
-      if (!phrase.includes(" ")) return;
+      if (!phrase.includes(' ')) return;
       const phraseWords = phrase.split(/\s+/);
       for (let i = 0; i <= wordTokens.length - phraseWords.length; i++) {
         if (defAtWordIdx.has(i)) continue;
         const matches = phraseWords.every(
-          (pw, j) => stripPunctuation(wordTokens[i + j]).toLowerCase() === pw
+          (pw, j) => stripPunctuation(wordTokens[i + j]).toLowerCase() === pw,
         );
         if (matches) defAtWordIdx.set(i, def);
       }
@@ -157,22 +164,22 @@ export function FillSegmentRow({
   }
 
   // Determine if any input has been filled (to activate the Check button)
-  const hasAnyInput = Array.from(answers.values()).some((v) => v.trim() !== "");
+  const hasAnyInput = Array.from(answers.values()).some((v) => v.trim() !== '');
 
   // Collect word tokens for tab navigation refs
   const inputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, wordIdx: number) => {
-    if (e.key === "Tab") {
+    if (e.key === 'Tab') {
       // Find next word input in this segment
-      const wordCount = tokens.filter((t) => t.type === "word").length;
+      const wordCount = tokens.filter((t) => t.type === 'word').length;
       const dir = e.shiftKey ? -1 : 1;
       const next = wordIdx + dir;
       if (next >= 0 && next < wordCount) {
         e.preventDefault();
         inputRefs.current.get(next)?.focus();
       }
-    } else if (e.key === "Enter" && hasAnyInput && !isChecked) {
+    } else if (e.key === 'Enter' && hasAnyInput && !isChecked) {
       e.preventDefault();
       onCheck();
     }
@@ -183,7 +190,7 @@ export function FillSegmentRow({
       ref={rowRef}
       className={`
         group flex gap-4 rounded-lg px-4 py-3 transition-all duration-200
-        ${isActive ? "bg-primary/10 ring-1 ring-inset ring-primary/20" : "hover:bg-muted/50"}
+        ${isActive ? 'bg-primary/10 ring-1 ring-inset ring-primary/20' : 'hover:bg-muted/50'}
       `}
     >
       {/* Timestamp & play button */}
@@ -191,7 +198,7 @@ export function FillSegmentRow({
         <span
           className={`
             font-mono text-[10px] tabular-nums transition-colors
-            ${isActive ? "text-primary font-bold" : "text-muted-foreground/50 group-hover:text-muted-foreground"}
+            ${isActive ? 'text-primary font-bold' : 'text-muted-foreground/50 group-hover:text-muted-foreground'}
           `}
         >
           {formatTime(segment.start_time)}
@@ -205,12 +212,12 @@ export function FillSegmentRow({
           aria-label={`Seek to ${formatTime(segment.start_time)}`}
           className={`transition-all duration-200 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary ${
             isActive
-              ? "opacity-100 scale-100"
-              : "opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100"
+              ? 'opacity-100 scale-100'
+              : 'opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100'
           }`}
         >
           <Play
-            className={`h-3 w-3 ${isActive ? "fill-primary text-primary" : "text-muted-foreground"}`}
+            className={`h-3 w-3 ${isActive ? 'fill-primary text-primary' : 'text-muted-foreground'}`}
           />
         </button>
       </div>
@@ -219,22 +226,19 @@ export function FillSegmentRow({
       <div className="flex-1 min-w-0">
         <p className="text-sm leading-relaxed flex flex-wrap items-baseline gap-y-1">
           {tokens.map((token, i) => {
-            if (token.type === "space") {
+            if (token.type === 'space') {
               return <span key={i}>&nbsp;</span>;
             }
 
             const { word, suffix, wordIdx } = token;
             const defForWord = defAtWordIdx.get(wordIdx);
             const hasDef = defForWord != null;
-            const isPhraseDef = hasDef && defForWord.original_text.includes(" ");
+            const isPhraseDef = hasDef && defForWord.original_text.includes(' ');
 
             if (!isChecked) {
               // ── Input mode ────────────────────────────────────────────────
-              const inputWidth =
-                hintLevel === "none"
-                  ? "4ch"
-                  : `${Math.max(3, word.length)}ch`;
-              const placeholder = hintLevel === "reveal" ? word : "";
+              const inputWidth = hintLevel === 'none' ? '4ch' : `${Math.max(3, word.length)}ch`;
+              const placeholder = hintLevel === 'reveal' ? word : '';
 
               return (
                 <span key={i} className="inline-flex items-baseline">
@@ -244,7 +248,7 @@ export function FillSegmentRow({
                       else inputRefs.current.delete(wordIdx);
                     }}
                     type="text"
-                    value={answers.get(wordIdx) ?? ""}
+                    value={answers.get(wordIdx) ?? ''}
                     onChange={(e) => onAnswerChange(wordIdx, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, wordIdx)}
                     placeholder={placeholder}
@@ -266,7 +270,7 @@ export function FillSegmentRow({
               );
             } else {
               // ── Checked / revealed mode ──────────────────────────────────
-              const typed = answers.get(wordIdx) ?? "";
+              const typed = answers.get(wordIdx) ?? '';
               const correct = checkAnswer(typed, word);
               const posKey = `${index}-${wordIdx}`;
               const isSelected = selectedPositionKeys?.has(posKey) ?? false;
@@ -295,31 +299,33 @@ export function FillSegmentRow({
                         handleDefinitionClick(
                           defForWord.original_text.toLowerCase(),
                           e.clientX + 10,
-                          e.clientY + 10
+                          e.clientY + 10,
                         );
                       }
                     }}
                     className={`
                       cursor-pointer rounded px-0.5 transition-colors select-none
-                      ${highlighted
-                        ? "bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100"
-                        : correct
-                          ? hasDef
-                            ? "text-indigo-600 dark:text-indigo-400"
-                            : "text-emerald-600 dark:text-emerald-400"
-                          : "text-red-500 dark:text-red-400"
+                      ${
+                        highlighted
+                          ? 'bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100'
+                          : correct
+                            ? hasDef
+                              ? 'text-indigo-600 dark:text-indigo-400'
+                              : 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-red-500 dark:text-red-400'
                       }
-                      ${hasDef
-                        ? `border-b-2 border-indigo-400 dark:border-indigo-500 ${isPhraseDef ? "border-dashed" : ""}`
-                        : correct
-                          ? ""
-                          : "border-b-2 border-red-400"
+                      ${
+                        hasDef
+                          ? `border-b-2 border-indigo-400 dark:border-indigo-500 ${isPhraseDef ? 'border-dashed' : ''}`
+                          : correct
+                            ? ''
+                            : 'border-b-2 border-red-400'
                       }
                     `}
                   >
                     {word}
                   </span>
-                  {!correct && typed.trim() !== "" && (
+                  {!correct && typed.trim() !== '' && (
                     <span className="text-[10px] text-red-400 line-through leading-none">
                       {typed}
                     </span>
@@ -344,7 +350,7 @@ export function FillSegmentRow({
                 disabled:opacity-30 disabled:cursor-not-allowed
               "
             >
-              {t("fillCheck")}
+              {t('fillCheck')}
             </button>
           ) : (
             <button
@@ -355,7 +361,7 @@ export function FillSegmentRow({
                 bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground
               "
             >
-              {t("fillRetry")}
+              {t('fillRetry')}
             </button>
           )}
         </div>

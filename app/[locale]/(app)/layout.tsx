@@ -1,11 +1,7 @@
-import { Header } from "@/components/layout/header";
-import { SessionGuard } from "@/components/auth/session-guard";
+import { Header } from '@/components/layout/header';
+import { SessionGuard } from '@/components/auth/session-guard';
 
-export default function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <SessionGuard />

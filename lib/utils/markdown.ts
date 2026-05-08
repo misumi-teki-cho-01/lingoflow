@@ -1,18 +1,18 @@
-import TurndownService from "turndown";
-import type { TranscriptSegment, CcSelection } from "@/types/transcript";
-import { formatTime } from "./format";
+import TurndownService from 'turndown';
+import type { TranscriptSegment, CcSelection } from '@/types/transcript';
+import { formatTime } from './format';
 
 // ── Turndown service ───────────────────────────────────────────────────────
 const td = new TurndownService({
-  headingStyle: "atx",
-  hr: "---",
-  bulletListMarker: "-",
-  codeBlockStyle: "fenced",
+  headingStyle: 'atx',
+  hr: '---',
+  bulletListMarker: '-',
+  codeBlockStyle: 'fenced',
 });
 
 // Bold text = "mark for review" — preserve as Markdown bold
-td.addRule("boldMark", {
-  filter: ["strong", "b"],
+td.addRule('boldMark', {
+  filter: ['strong', 'b'],
   replacement: (content) => `**${content}**`,
 });
 
@@ -27,16 +27,14 @@ export interface ExportMetadata {
 
 function buildHeader(metadata: ExportMetadata): string {
   const lines: string[] = [
-    `# ${metadata.title || "Untitled"}`,
+    `# ${metadata.title || 'Untitled'}`,
     `**Source:** [${metadata.url}](${metadata.url})`,
   ];
   if (metadata.channelName) lines.push(`**Channel:** ${metadata.channelName}`);
   if (metadata.duration)
-    lines.push(
-      `**Duration:** ${Math.floor(metadata.duration / 60)}m ${metadata.duration % 60}s`
-    );
-  lines.push(`**Date:** ${metadata.date}`, "", "---", "");
-  return lines.join("\n");
+    lines.push(`**Duration:** ${Math.floor(metadata.duration / 60)}m ${metadata.duration % 60}s`);
+  lines.push(`**Date:** ${metadata.date}`, '', '---', '');
+  return lines.join('\n');
 }
 
 // ── Echo Scribe export (HTML → Markdown) ──────────────────────────────────
@@ -54,11 +52,9 @@ export function convertToMarkdown(html: string, metadata: ExportMetadata): strin
  */
 export function convertTranscriptToMarkdown(
   segments: TranscriptSegment[],
-  metadata: ExportMetadata
+  metadata: ExportMetadata,
 ): string {
-  const body = segments
-    .map((s) => `[${formatTime(s.start_time)}] ${s.text}`)
-    .join("\n");
+  const body = segments.map((s) => `[${formatTime(s.start_time)}] ${s.text}`).join('\n');
   return buildHeader(metadata) + body;
 }
 
@@ -70,7 +66,7 @@ export function convertTranscriptToMarkdown(
 export function convertTranscriptToMarkdownWithHighlights(
   segments: TranscriptSegment[],
   metadata: ExportMetadata,
-  selections: CcSelection[]
+  selections: CcSelection[],
 ): string {
   const body = segments
     .map((seg, segIdx) => {
@@ -86,25 +82,23 @@ export function convertTranscriptToMarkdownWithHighlights(
         if (/^\s+$/.test(token)) return token;
         const currentWordIdx = wordIdx++;
         const isBold = selInSeg.some(
-          (s) =>
-            currentWordIdx >= s.startWordIndex &&
-            currentWordIdx <= s.endWordIndex
+          (s) => currentWordIdx >= s.startWordIndex && currentWordIdx <= s.endWordIndex,
         );
         return isBold ? `**${token}**` : token;
       });
 
-      return `[${formatTime(seg.start_time)}] ${result.join("")}`;
+      return `[${formatTime(seg.start_time)}] ${result.join('')}`;
     })
-    .join("\n");
+    .join('\n');
 
   return buildHeader(metadata) + body;
 }
 
 // ── Download helper ────────────────────────────────────────────────────────
 export function downloadMarkdown(content: string, filename: string) {
-  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);

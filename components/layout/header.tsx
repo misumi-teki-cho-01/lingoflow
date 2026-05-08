@@ -1,10 +1,10 @@
-import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
-import { LocaleSwitcher } from "./locale-switcher";
-import { LogoutButton } from "./logout-button";
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
+import { LocaleSwitcher } from './locale-switcher';
+import { LogoutButton } from './logout-button';
 
 export function Header() {
-  const t = useTranslations("nav");
+  const t = useTranslations('nav');
 
   return (
     <header className="border-b border-border bg-background">
@@ -18,13 +18,13 @@ export function Header() {
             href="/dashboard"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            {t("dashboard")}
+            {t('dashboard')}
           </Link>
           <Link
             href="/settings"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            {t("settings")}
+            {t('settings')}
           </Link>
           <LogoutButton />
           <LocaleSwitcher />

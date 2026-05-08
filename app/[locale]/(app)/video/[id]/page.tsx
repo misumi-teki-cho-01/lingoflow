@@ -1,13 +1,16 @@
-import { notFound, redirect } from "next/navigation";
-import { StudyRoom, type StudyMode } from "@/components/study-room/study-room";
-import { runTranscriptionPipeline } from "@/lib/pipeline/transcription-pipeline";
-import { fetchYouTubeMeta, type YouTubeMeta } from "@/lib/utils/youtube-meta";
-import { createClient } from "@/lib/supabase/server";
-import { getUserDictationByVideoId } from "@/lib/db/dictations";
-import { getSavedCcSelectionsForTranscript, getSavedVocabularyForTranscript } from "@/lib/db/vocabulary";
-import type { CcSelection, TranscriptSegment } from "@/types/transcript";
-import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
-import type { VocabularyExplanation } from "@/lib/ai/services";
+import { notFound, redirect } from 'next/navigation';
+import { StudyRoom, type StudyMode } from '@/components/study-room/study-room';
+import { runTranscriptionPipeline } from '@/lib/pipeline/transcription-pipeline';
+import { fetchYouTubeMeta, type YouTubeMeta } from '@/lib/utils/youtube-meta';
+import { createClient } from '@/lib/supabase/server';
+import { getUserDictationByVideoId } from '@/lib/db/dictations';
+import {
+  getSavedCcSelectionsForTranscript,
+  getSavedVocabularyForTranscript,
+} from '@/lib/db/vocabulary';
+import type { CcSelection, TranscriptSegment } from '@/types/transcript';
+import type { TranscriptSource } from '@/lib/pipeline/transcription-pipeline';
+import type { VocabularyExplanation } from '@/lib/ai/services';
 
 const YT_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 
@@ -36,30 +39,32 @@ async function getVideoFromDB(videoExtId: string): Promise<{
     const supabase = await createClient();
 
     const { data: video } = await supabase
-      .from("videos")
-      .select("id, title, channel_name, thumbnail_url")
-      .eq("video_ext_id", videoExtId)
+      .from('videos')
+      .select('id, title, channel_name, thumbnail_url')
+      .eq('video_ext_id', videoExtId)
       .single();
 
     if (!video) {
-      return { video: null, transcript: null, definitions: {}, ccSelections: [], dictationHtml: null };
+      return {
+        video: null,
+        transcript: null,
+        definitions: {},
+        ccSelections: [],
+        dictationHtml: null,
+      };
     }
 
     const { data: transcript } = await supabase
-      .from("transcripts")
-      .select("id, segments, quality")
-      .eq("video_id", video.id)
-      .eq("language", "en")
-      .eq("status", "completed")
+      .from('transcripts')
+      .select('id, segments, quality')
+      .eq('video_id', video.id)
+      .eq('language', 'en')
+      .eq('status', 'completed')
       .single();
 
-    const definitions = transcript
-      ? await getSavedVocabularyForTranscript(transcript.id)
-      : {};
-    const ccSelections = transcript
-      ? await getSavedCcSelectionsForTranscript(transcript.id)
-      : [];
-    const dictation = await getUserDictationByVideoId(video.id, "en");
+    const definitions = transcript ? await getSavedVocabularyForTranscript(transcript.id) : {};
+    const ccSelections = transcript ? await getSavedCcSelectionsForTranscript(transcript.id) : [];
+    const dictation = await getUserDictationByVideoId(video.id, 'en');
 
     return {
       video,
@@ -75,7 +80,13 @@ async function getVideoFromDB(videoExtId: string): Promise<{
         : null,
     };
   } catch {
-    return { video: null, transcript: null, definitions: {}, ccSelections: [], dictationHtml: null };
+    return {
+      video: null,
+      transcript: null,
+      definitions: {},
+      ccSelections: [],
+      dictationHtml: null,
+    };
   }
 }
 
@@ -92,11 +103,17 @@ export default async function VideoPage({
 
   if (!YT_ID_RE.test(id)) notFound();
 
-  const defaultMode: StudyMode = mode === "scribe" ? "scribe" : "cc";
+  const defaultMode: StudyMode = mode === 'scribe' ? 'scribe' : 'cc';
   const videoUrl = `https://www.youtube.com/watch?v=${id}`;
 
   // ── Try DB first ───────────────────────────────────────────────────────────
-  const { video: dbVideo, transcript: dbTranscript, definitions, ccSelections, dictationHtml } = await getVideoFromDB(id);
+  const {
+    video: dbVideo,
+    transcript: dbTranscript,
+    definitions,
+    ccSelections,
+    dictationHtml,
+  } = await getVideoFromDB(id);
 
   let videoMeta: YouTubeMeta;
   let segments: TranscriptSegment[];
@@ -105,9 +122,9 @@ export default async function VideoPage({
   if (dbVideo && dbTranscript) {
     // Fast path: everything is in DB already
     videoMeta = {
-      title: dbVideo.title ?? "",
-      channelName: dbVideo.channel_name ?? "",
-      thumbnailUrl: dbVideo.thumbnail_url ?? "",
+      title: dbVideo.title ?? '',
+      channelName: dbVideo.channel_name ?? '',
+      thumbnailUrl: dbVideo.thumbnail_url ?? '',
     };
     segments = dbTranscript.segments;
     transcriptSource = dbTranscript.quality;
@@ -115,10 +132,10 @@ export default async function VideoPage({
     // Fallback: video accessed directly (not via import flow)
     const [meta, result] = await Promise.all([
       fetchYouTubeMeta(id),
-      runTranscriptionPipeline("youtube", id, "en"),
+      runTranscriptionPipeline('youtube', id, 'en'),
     ]);
 
-    if (result.source === "failed" || result.segments.length === 0) {
+    if (result.source === 'failed' || result.segments.length === 0) {
       redirect(`/${locale}/dashboard?error=no-subtitles&video=${id}`);
     }
 

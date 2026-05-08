@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   ScrollText,
   Search,
@@ -14,12 +14,12 @@ import {
   Check,
   Sparkles,
   TriangleAlert,
-} from "lucide-react";
-import { TranscriptSegmentRow } from "./transcript-segment";
-import { DictionaryPopover } from "@/components/scribe/dictionary-popover";
-import type { TranscriptSegment, DragState } from "@/types/transcript";
-import type { TranscriptSource } from "@/lib/pipeline/transcription-pipeline";
-import type { VocabularyExplanation } from "@/lib/ai/services";
+} from 'lucide-react';
+import { TranscriptSegmentRow } from './transcript-segment';
+import { DictionaryPopover } from '@/components/scribe/dictionary-popover';
+import type { TranscriptSegment, DragState } from '@/types/transcript';
+import type { TranscriptSource } from '@/lib/pipeline/transcription-pipeline';
+import type { VocabularyExplanation } from '@/lib/ai/services';
 
 interface TranscriptPanelProps {
   segments: TranscriptSegment[];
@@ -70,16 +70,19 @@ export function TranscriptPanel({
   onExplainWords,
   onClearWords,
 }: TranscriptPanelProps) {
-  const t = useTranslations("transcript");
-  const tCommon = useTranslations("common");
+  const t = useTranslations('transcript');
+  const tCommon = useTranslations('common');
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Definition popover state
   const [popup, setPopup] = useState<{
-    visible: boolean; x: number; y: number; wordData?: VocabularyExplanation;
+    visible: boolean;
+    x: number;
+    y: number;
+    wordData?: VocabularyExplanation;
   }>({ visible: false, x: 0, y: 0 });
 
   // Lowercase key map for fast definition lookup
@@ -95,7 +98,7 @@ export function TranscriptPanel({
     setPopup((prev) =>
       prev.visible && prev.wordData === wordData
         ? { ...prev, visible: false }
-        : { visible: true, x, y, wordData }
+        : { visible: true, x, y, wordData },
     );
   };
 
@@ -103,11 +106,14 @@ export function TranscriptPanel({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Source badge labels — keyed from i18n
-  const SOURCE_LABELS: Record<TranscriptSource, { label: string; variant: "default" | "secondary" | "outline" }> = {
-    "subtitle-enhanced": { label: t("sourceEnhanced"), variant: "default" },
-    "subtitle-raw":      { label: t("sourceRaw"),      variant: "secondary" },
-    "audio-transcribed": { label: t("sourceAudio"),    variant: "default" },
-    "failed":            { label: t("sourceFailed"),   variant: "outline" },
+  const SOURCE_LABELS: Record<
+    TranscriptSource,
+    { label: string; variant: 'default' | 'secondary' | 'outline' }
+  > = {
+    'subtitle-enhanced': { label: t('sourceEnhanced'), variant: 'default' },
+    'subtitle-raw': { label: t('sourceRaw'), variant: 'secondary' },
+    'audio-transcribed': { label: t('sourceAudio'), variant: 'default' },
+    failed: { label: t('sourceFailed'), variant: 'outline' },
   };
 
   // Filter segments based on search query
@@ -120,7 +126,7 @@ export function TranscriptPanel({
   // Auto-scroll to active segment
   useEffect(() => {
     if (activeSegmentIndex < 0 || !isAutoScrollEnabled) return;
-    activeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [activeSegmentIndex, isAutoScrollEnabled]);
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -146,11 +152,9 @@ export function TranscriptPanel({
           <ScrollText className="h-10 w-10 text-muted-foreground/40" />
         </div>
         <div className="max-w-[200px]">
-          <p className="font-semibold">
-            {errorMessage ? t("fetchFailed") : t("noSubtitles")}
-          </p>
+          <p className="font-semibold">{errorMessage ? t('fetchFailed') : t('noSubtitles')}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {errorMessage ?? t("noSubtitlesDesc")}
+            {errorMessage ?? t('noSubtitlesDesc')}
           </p>
         </div>
       </div>
@@ -164,8 +168,8 @@ export function TranscriptPanel({
       <div className="flex flex-col border-b border-border bg-muted/30 p-3 pb-0">
         <div className="flex items-center justify-between mb-3 px-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold tracking-tight">{t("title")}</h3>
-            {source && source !== "failed" && (
+            <h3 className="text-sm font-bold tracking-tight">{t('title')}</h3>
+            {source && source !== 'failed' && (
               <Badge
                 variant={SOURCE_LABELS[source].variant}
                 className="h-5 px-1.5 text-[10px] font-medium uppercase tracking-wider"
@@ -181,11 +185,11 @@ export function TranscriptPanel({
               size="icon"
               className={`h-8 w-8 transition-colors ${
                 isAutoScrollEnabled
-                  ? "text-primary bg-primary/10 hover:bg-primary/20"
-                  : "text-muted-foreground"
+                  ? 'text-primary bg-primary/10 hover:bg-primary/20'
+                  : 'text-muted-foreground'
               }`}
               onClick={() => setIsAutoScrollEnabled((v) => !v)}
-              title={t("autoScroll")}
+              title={t('autoScroll')}
             >
               <MousePointerClick className="h-4 w-4" />
             </Button>
@@ -199,12 +203,12 @@ export function TranscriptPanel({
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("searchPlaceholder")}
+              placeholder={t('searchPlaceholder')}
               className="h-8 pl-8 pr-7 text-xs bg-background/50 border-none ring-1 ring-border focus-visible:ring-primary/50"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery("")}
+                onClick={() => setSearchQuery('')}
                 aria-label="Clear search"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -255,7 +259,7 @@ export function TranscriptPanel({
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
               <Search className="h-8 w-8 mb-2 opacity-20" />
-              <p className="text-sm">{t("searchEmpty", { query: searchQuery })}</p>
+              <p className="text-sm">{t('searchEmpty', { query: searchQuery })}</p>
             </div>
           )}
         </div>
@@ -266,14 +270,12 @@ export function TranscriptPanel({
           <div className="bg-gradient-to-t from-card via-card/95 to-transparent px-3 pb-3 pt-10">
             <div
               className={`pointer-events-auto flex items-center gap-3 rounded-2xl border border-border/70 bg-background/95 px-3 py-2 shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 ${
-                wordClickMode ? "justify-between" : "justify-end"
+                wordClickMode ? 'justify-between' : 'justify-end'
               }`}
             >
               {wordClickMode && (
                 <div className="min-w-0 flex-1 self-center">
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {t("wordClickHint")}
-                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">{t('wordClickHint')}</p>
                 </div>
               )}
 
@@ -285,7 +287,7 @@ export function TranscriptPanel({
                     className="h-8 rounded-full px-3 text-xs text-muted-foreground hover:text-foreground"
                     onClick={() => setShowClearConfirm(true)}
                   >
-                    {t("clearSelection")}
+                    {t('clearSelection')}
                   </Button>
                 )}
 
@@ -296,7 +298,7 @@ export function TranscriptPanel({
                     className="h-9 gap-2 rounded-full bg-indigo-600 px-4 text-white shadow-md hover:bg-indigo-700"
                   >
                     <Sparkles className="h-3.5 w-3.5" />
-                    <span>{t("explainWords", { count: selectionCount })}</span>
+                    <span>{t('explainWords', { count: selectionCount })}</span>
                   </Button>
                 )}
 
@@ -305,12 +307,15 @@ export function TranscriptPanel({
                     size="sm"
                     onClick={() => {
                       setIsAutoScrollEnabled(true);
-                      activeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      activeRef.current?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                      });
                     }}
                     className="h-9 gap-2 rounded-full px-4 shadow-md"
                   >
                     <Check className="h-3.5 w-3.5" />
-                    <span>{t("followProgress")}</span>
+                    <span>{t('followProgress')}</span>
                   </Button>
                 )}
               </div>
@@ -327,9 +332,9 @@ export function TranscriptPanel({
                 <TriangleAlert className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="text-sm font-semibold">{t("clearSelectionConfirmTitle")}</h4>
+                <h4 className="text-sm font-semibold">{t('clearSelectionConfirmTitle')}</h4>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {t("clearSelectionConfirmBody", { count: selectionCount })}
+                  {t('clearSelectionConfirmBody', { count: selectionCount })}
                 </p>
               </div>
             </div>
@@ -340,7 +345,7 @@ export function TranscriptPanel({
                 onClick={() => setShowClearConfirm(false)}
                 className="rounded-full"
               >
-                {tCommon("cancel")}
+                {tCommon('cancel')}
               </Button>
               <Button
                 variant="destructive"
@@ -350,7 +355,7 @@ export function TranscriptPanel({
                 }}
                 className="rounded-full"
               >
-                {tCommon("confirm")}
+                {tCommon('confirm')}
               </Button>
             </div>
           </div>

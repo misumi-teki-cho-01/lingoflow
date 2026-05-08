@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations, useLocale } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { JsonValidationBadge } from "@/components/ui/json-validation-badge";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { JsonValidationBadge } from '@/components/ui/json-validation-badge';
 import {
   CheckCircle2,
   Copy,
@@ -13,26 +13,26 @@ import {
   ChevronLeft,
   Languages,
   Loader2,
-} from "lucide-react";
-import type { VocabularyExplanation } from "@/lib/ai/services";
-import type { SelectedWord } from "@/hooks/use-vocabulary-review";
-import { getExplainDictationPrompt } from "@/lib/ai/prompts";
-import { useJsonValidation } from "@/hooks/use-json-validation";
+} from 'lucide-react';
+import type { VocabularyExplanation } from '@/lib/ai/services';
+import type { SelectedWord } from '@/hooks/use-vocabulary-review';
+import { getExplainDictationPrompt } from '@/lib/ai/prompts';
+import { useJsonValidation } from '@/hooks/use-json-validation';
 
 export type { SelectedWord };
 
-type Step = "review_words" | "prompt_editor" | "paste_json" | "review_ai";
+type Step = 'review_words' | 'prompt_editor' | 'paste_json' | 'review_ai';
 type Notice = {
-  tone: "success" | "error" | "info";
+  tone: 'success' | 'error' | 'info';
   text: string;
 } | null;
 
-const PROMPT_LANGUAGE_KEY = "lingo-prompt-language";
+const PROMPT_LANGUAGE_KEY = 'lingo-prompt-language';
 
 const LANGUAGE_OPTIONS = [
-  { value: "zh", label: "中文" },
-  { value: "ja", label: "日本語" },
-  { value: "en", label: "English" },
+  { value: 'zh', label: '中文' },
+  { value: 'ja', label: '日本語' },
+  { value: 'en', label: 'English' },
 ];
 
 export interface VocabularyReviewModalProps {
@@ -43,7 +43,7 @@ export interface VocabularyReviewModalProps {
   onSave: (
     finalData: Record<string, VocabularyExplanation>,
     transforms: { id: string; newText: string }[],
-    options: { persistReviewedTranscript: boolean }
+    options: { persistReviewedTranscript: boolean },
   ) => Promise<void>;
   getContextText: () => Promise<string>;
   showPersistOption?: boolean;
@@ -79,7 +79,9 @@ function WordBadgeSection({
     <div className="rounded-lg border border-border bg-background px-4 py-3 space-y-2.5">
       {newWords.length > 0 && (
         <div>
-          <div className="text-xs font-medium text-muted-foreground mb-1.5">{selectedWordsLabel}</div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5">
+            {selectedWordsLabel}
+          </div>
           <div className="flex flex-wrap gap-2">
             {newWords.map((word) => (
               <span
@@ -94,7 +96,9 @@ function WordBadgeSection({
       )}
       {alreadyDefinedWords.length > 0 && (
         <div>
-          <div className="text-xs font-medium text-muted-foreground mb-1.5">{alreadyDefinedLabel}</div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5">
+            {alreadyDefinedLabel}
+          </div>
           <div className="flex flex-wrap gap-2">
             {alreadyDefinedWords.map((word) => (
               <span
@@ -116,27 +120,27 @@ function normalizeDefinitions(input: string): VocabularyExplanation[] {
 
   if (Array.isArray(parsed)) {
     return parsed.filter((item): item is VocabularyExplanation => {
-      if (!item || typeof item !== "object") return false;
+      if (!item || typeof item !== 'object') return false;
       const value = item as Record<string, unknown>;
       return (
-        typeof value.original_text === "string" &&
-        typeof value.canonical_form === "string" &&
-        typeof value.explanation === "string"
+        typeof value.original_text === 'string' &&
+        typeof value.canonical_form === 'string' &&
+        typeof value.explanation === 'string'
       );
     });
   }
 
-  if (!parsed || typeof parsed !== "object") {
-    throw new Error("Invalid JSON shape");
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid JSON shape');
   }
 
   return Object.values(parsed).filter((item): item is VocabularyExplanation => {
-    if (!item || typeof item !== "object") return false;
+    if (!item || typeof item !== 'object') return false;
     const value = item as Record<string, unknown>;
     return (
-      typeof value.original_text === "string" &&
-      typeof value.canonical_form === "string" &&
-      typeof value.explanation === "string"
+      typeof value.original_text === 'string' &&
+      typeof value.canonical_form === 'string' &&
+      typeof value.explanation === 'string'
     );
   });
 }
@@ -144,7 +148,7 @@ function normalizeDefinitions(input: string): VocabularyExplanation[] {
 export function VocabularyReviewModal({
   visible,
   initialWords,
-  initialStep = "review_words",
+  initialStep = 'review_words',
   onCancel,
   onSave,
   getContextText,
@@ -152,21 +156,18 @@ export function VocabularyReviewModal({
   onFeedback,
   existingDefinitions = {},
 }: VocabularyReviewModalProps) {
-  const t = useTranslations("studyRoom");
+  const t = useTranslations('studyRoom');
   const locale = useLocale();
 
   const [step, setStep] = useState<Step>(initialStep);
   const [rows, setRows] = useState<RowState[]>([]);
-  const [pastedJson, setPastedJson] = useState("");
+  const [pastedJson, setPastedJson] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [persistReviewedTranscript, setPersistReviewedTranscript] = useState(true);
 
   const pasteTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const jsonValidation = useJsonValidation(
-    step === "paste_json" ? pastedJson : "",
-    "vocabulary"
-  );
+  const jsonValidation = useJsonValidation(step === 'paste_json' ? pastedJson : '', 'vocabulary');
 
   // Apply auto-corrected text back to the textarea when the hook fixes it
   useEffect(() => {
@@ -177,52 +178,50 @@ export function VocabularyReviewModal({
 
   // Prompt editor state
   const [promptLanguage, setPromptLanguage] = useState<string>(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       return localStorage.getItem(PROMPT_LANGUAGE_KEY) || locale;
     }
     return locale;
   });
-  const [editablePrompt, setEditablePrompt] = useState("");
+  const [editablePrompt, setEditablePrompt] = useState('');
   const [isLoadingPrompt, setIsLoadingPrompt] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
-  const fetchedContextRef = useRef<string>("");
+  const fetchedContextRef = useRef<string>('');
 
   useEffect(() => {
     if (!visible) return;
 
     setStep(initialStep);
-    setPastedJson("");
+    setPastedJson('');
     setIsSaving(false);
     setNotice(null);
     setPersistReviewedTranscript(true);
-    setEditablePrompt("");
+    setEditablePrompt('');
     setPromptCopied(false);
-    fetchedContextRef.current = "";
+    fetchedContextRef.current = '';
     setRows(
       initialWords.map((w) => {
         const key = w.text.trim().toLowerCase();
-        const existing =
-          existingDefinitions[key] ??
-          existingDefinitions[w.text.trim()];
+        const existing = existingDefinitions[key] ?? existingDefinitions[w.text.trim()];
         return {
           id: w.id,
           original_text: w.text.trim(),
-          canonical_form: existing?.canonical_form ?? "",
-          explanation: existing?.explanation ?? "",
+          canonical_form: existing?.canonical_form ?? '',
+          explanation: existing?.explanation ?? '',
         };
-      })
+      }),
     );
     // Read persisted language preference
-    const saved = typeof window !== "undefined" ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
     setPromptLanguage(saved || locale);
-  // existingDefinitions intentionally omitted — we only want to re-init when the
-  // modal opens (visible) or the word list changes, not on every definition update.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // existingDefinitions intentionally omitted — we only want to re-init when the
+    // modal opens (visible) or the word list changes, not on every definition update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, initialWords, initialStep, locale]);
 
   const uniqueWords = useMemo(
     () => Array.from(new Set(rows.map((row) => row.original_text).filter(Boolean))),
-    [rows]
+    [rows],
   );
 
   // Words that don't yet have a definition — these are the only ones sent to the AI.
@@ -232,7 +231,7 @@ export function VocabularyReviewModal({
         const key = w.toLowerCase();
         return !existingDefinitions[key] && !existingDefinitions[w];
       }),
-    [uniqueWords, existingDefinitions]
+    [uniqueWords, existingDefinitions],
   );
 
   if (!visible) return null;
@@ -251,8 +250,8 @@ export function VocabularyReviewModal({
     // Only include words that don't already have a saved definition
     const wordsForAI = newWordsForPrompt.length > 0 ? newWordsForPrompt : uniqueWords;
     return template
-      .replace("{{text}}", context)
-      .replace("{{words}}", JSON.stringify(wordsForAI, null, 2));
+      .replace('{{text}}', context)
+      .replace('{{words}}', JSON.stringify(wordsForAI, null, 2));
   };
 
   const handleGoToPromptEditor = async () => {
@@ -264,9 +263,9 @@ export function VocabularyReviewModal({
         fetchedContextRef.current = ctx;
       }
       setEditablePrompt(buildPrompt(ctx, promptLanguage));
-      setStep("prompt_editor");
+      setStep('prompt_editor');
     } catch {
-      updateNotice({ tone: "error", text: t("copyPromptFailed") });
+      updateNotice({ tone: 'error', text: t('copyPromptFailed') });
     } finally {
       setIsLoadingPrompt(false);
     }
@@ -285,10 +284,10 @@ export function VocabularyReviewModal({
       await navigator.clipboard.writeText(editablePrompt);
       setPromptCopied(true);
       setTimeout(() => setPromptCopied(false), 1500);
-      updateNotice({ tone: "success", text: t("promptCopiedToast") });
-      setStep("paste_json");
+      updateNotice({ tone: 'success', text: t('promptCopiedToast') });
+      setStep('paste_json');
     } catch {
-      updateNotice({ tone: "error", text: t("copyPromptFailed") });
+      updateNotice({ tone: 'error', text: t('copyPromptFailed') });
     }
   };
 
@@ -296,7 +295,7 @@ export function VocabularyReviewModal({
     try {
       const definitions = normalizeDefinitions(pastedJson);
       const byOriginal = new Map(
-        definitions.map((item) => [item.original_text.trim().toLowerCase(), item])
+        definitions.map((item) => [item.original_text.trim().toLowerCase(), item]),
       );
 
       let matchedCount = 0;
@@ -312,18 +311,18 @@ export function VocabularyReviewModal({
       });
 
       if (matchedCount === 0) {
-        updateNotice({ tone: "error", text: t("jsonNoMatch") });
+        updateNotice({ tone: 'error', text: t('jsonNoMatch') });
         return;
       }
 
       setRows(nextRows);
-      setStep("review_ai");
+      setStep('review_ai');
       updateNotice({
-        tone: "success",
-        text: t("jsonParsed", { count: matchedCount }),
+        tone: 'success',
+        text: t('jsonParsed', { count: matchedCount }),
       });
     } catch {
-      updateNotice({ tone: "error", text: t("jsonInvalid") });
+      updateNotice({ tone: 'error', text: t('jsonInvalid') });
     }
   };
 
@@ -352,33 +351,33 @@ export function VocabularyReviewModal({
       await onSave(finalData, transforms, {
         persistReviewedTranscript,
       });
-      updateNotice({ tone: "success", text: t("saveSuccess") });
+      updateNotice({ tone: 'success', text: t('saveSuccess') });
     } catch {
-      updateNotice({ tone: "error", text: t("saveFailed") });
+      updateNotice({ tone: 'error', text: t('saveFailed') });
     } finally {
       setIsSaving(false);
     }
   };
 
   const noticeClassName =
-    notice?.tone === "success"
-      ? "border-emerald-300/70 bg-emerald-50 text-emerald-700"
-      : notice?.tone === "error"
-        ? "border-red-300/70 bg-red-50 text-red-700"
-        : "border-sky-300/70 bg-sky-50 text-sky-700";
+    notice?.tone === 'success'
+      ? 'border-emerald-300/70 bg-emerald-50 text-emerald-700'
+      : notice?.tone === 'error'
+        ? 'border-red-300/70 bg-red-50 text-red-700'
+        : 'border-sky-300/70 bg-sky-50 text-sky-700';
 
   const stepTitle = {
-    review_words: t("reviewSelectionTitle"),
-    prompt_editor: t("promptEditorTitle"),
-    paste_json: t("pasteJsonTitle"),
-    review_ai: t("reviewDefinitionsTitle"),
+    review_words: t('reviewSelectionTitle'),
+    prompt_editor: t('promptEditorTitle'),
+    paste_json: t('pasteJsonTitle'),
+    review_ai: t('reviewDefinitionsTitle'),
   }[step];
 
   const stepDesc = {
-    review_words: t("reviewSelectionDesc"),
-    prompt_editor: t("promptEditorDesc"),
-    paste_json: t("pasteJsonDesc"),
-    review_ai: t("reviewDefinitionsDesc"),
+    review_words: t('reviewSelectionDesc'),
+    prompt_editor: t('promptEditorDesc'),
+    paste_json: t('pasteJsonDesc'),
+    review_ai: t('reviewDefinitionsDesc'),
   }[step];
 
   return (
@@ -391,16 +390,18 @@ export function VocabularyReviewModal({
             <p className="text-sm text-muted-foreground mt-1">{stepDesc}</p>
           </div>
           <Button variant="outline" onClick={onCancel} disabled={isSaving}>
-            {t("close")}
+            {t('close')}
           </Button>
         </div>
 
         {/* Notice */}
         {notice && (
-          <div className={`mx-6 mt-4 rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${noticeClassName}`}>
-            {notice.tone === "success" ? (
+          <div
+            className={`mx-6 mt-4 rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${noticeClassName}`}
+          >
+            {notice.tone === 'success' ? (
               <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
-            ) : notice.tone === "error" ? (
+            ) : notice.tone === 'error' ? (
               <TriangleAlert className="h-4 w-4 mt-0.5 shrink-0" />
             ) : (
               <FileJson className="h-4 w-4 mt-0.5 shrink-0" />
@@ -413,15 +414,15 @@ export function VocabularyReviewModal({
         <div className="flex-1 overflow-y-auto p-6 bg-muted/10 custom-scrollbar">
           {rows.length === 0 ? (
             <div className="text-center text-muted-foreground py-10">
-              {t("noVocabularySelected")}
+              {t('noVocabularySelected')}
             </div>
-          ) : step === "prompt_editor" ? (
+          ) : step === 'prompt_editor' ? (
             /* ── Prompt Editor ── */
             <div className="space-y-4">
               {/* Language selector */}
               <div className="flex items-center gap-3">
                 <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm font-medium shrink-0">{t("promptLanguage")}</span>
+                <span className="text-sm font-medium shrink-0">{t('promptLanguage')}</span>
                 <div className="flex items-center gap-1 rounded-full border border-border bg-muted/30 p-0.5">
                   {LANGUAGE_OPTIONS.map((opt) => (
                     <button
@@ -429,8 +430,8 @@ export function VocabularyReviewModal({
                       onClick={() => handleLanguageChange(opt.value)}
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                         promptLanguage === opt.value
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       {opt.label}
@@ -442,14 +443,14 @@ export function VocabularyReviewModal({
               {/* Selected words — split into new (sent to AI) and already-defined (skipped) */}
               <WordBadgeSection
                 newWords={newWordsForPrompt}
-                alreadyDefinedWords={uniqueWords.filter(w => !newWordsForPrompt.includes(w))}
-                selectedWordsLabel={t("selectedWords")}
-                alreadyDefinedLabel={t("alreadyDefined")}
+                alreadyDefinedWords={uniqueWords.filter((w) => !newWordsForPrompt.includes(w))}
+                selectedWordsLabel={t('selectedWords')}
+                alreadyDefinedLabel={t('alreadyDefined')}
               />
 
               {/* Editable prompt */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t("promptEditableLabel")}</label>
+                <label className="text-sm font-medium">{t('promptEditableLabel')}</label>
                 <textarea
                   value={editablePrompt}
                   onChange={(e) => setEditablePrompt(e.target.value)}
@@ -457,32 +458,32 @@ export function VocabularyReviewModal({
                 />
               </div>
             </div>
-          ) : step === "paste_json" ? (
+          ) : step === 'paste_json' ? (
             /* ── Paste JSON ── */
             <div className="space-y-4">
               <WordBadgeSection
                 newWords={newWordsForPrompt}
-                alreadyDefinedWords={uniqueWords.filter(w => !newWordsForPrompt.includes(w))}
-                selectedWordsLabel={t("selectedWords")}
-                alreadyDefinedLabel={t("alreadyDefined")}
+                alreadyDefinedWords={uniqueWords.filter((w) => !newWordsForPrompt.includes(w))}
+                selectedWordsLabel={t('selectedWords')}
+                alreadyDefinedLabel={t('alreadyDefined')}
               />
 
               <div className="space-y-2">
                 <label htmlFor="vocabulary-json" className="text-sm font-medium">
-                  {t("pasteJsonLabel")}
+                  {t('pasteJsonLabel')}
                 </label>
                 <textarea
                   id="vocabulary-json"
                   ref={pasteTextareaRef}
                   value={pastedJson}
                   onChange={(e) => setPastedJson(e.target.value)}
-                  placeholder={t("pasteJsonPlaceholder")}
+                  placeholder={t('pasteJsonPlaceholder')}
                   className={`min-h-[280px] w-full rounded-lg border bg-background px-3 py-3 text-sm font-mono focus-visible:outline-none focus-visible:ring-1 custom-scrollbar transition-colors ${
-                    jsonValidation.status === "invalid"
-                      ? "border-red-400 focus-visible:ring-red-400"
-                      : jsonValidation.status === "valid"
-                        ? "border-emerald-400 focus-visible:ring-emerald-400"
-                        : "border-input focus-visible:ring-ring"
+                    jsonValidation.status === 'invalid'
+                      ? 'border-red-400 focus-visible:ring-red-400'
+                      : jsonValidation.status === 'valid'
+                        ? 'border-emerald-400 focus-visible:ring-emerald-400'
+                        : 'border-input focus-visible:ring-ring'
                   }`}
                 />
                 <JsonValidationBadge
@@ -498,55 +499,70 @@ export function VocabularyReviewModal({
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted text-muted-foreground font-medium border-b">
                   <tr>
-                    <th className="px-4 py-3 min-w-[150px]">{t("detectedWord")}</th>
-                    <th className="px-4 py-3 min-w-[150px]">{t("canonicalForm")}</th>
-                    <th className="px-4 py-3 w-1/2">{t("explanation")}</th>
+                    <th className="px-4 py-3 min-w-[150px]">{t('detectedWord')}</th>
+                    <th className="px-4 py-3 min-w-[150px]">{t('canonicalForm')}</th>
+                    <th className="px-4 py-3 w-1/2">{t('explanation')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {rows.map((row) => {
-                    const isPreFilled = !!row.explanation && (
-                      !!existingDefinitions[row.original_text.toLowerCase()] ||
-                      !!existingDefinitions[row.original_text]
-                    );
+                    const isPreFilled =
+                      !!row.explanation &&
+                      (!!existingDefinitions[row.original_text.toLowerCase()] ||
+                        !!existingDefinitions[row.original_text]);
                     return (
-                      <tr key={row.id} className={`hover:bg-muted/30 transition-colors ${isPreFilled ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""}`}>
+                      <tr
+                        key={row.id}
+                        className={`hover:bg-muted/30 transition-colors ${isPreFilled ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''}`}
+                      >
                         <td className="px-4 py-3 align-top">
-                          <span className={`font-medium ${isPreFilled ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-500"}`}>
+                          <span
+                            className={`font-medium ${isPreFilled ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-500'}`}
+                          >
                             {row.original_text}
                           </span>
                           {isPreFilled && (
                             <span className="ml-1.5 text-[10px] font-medium text-emerald-500 bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded-full">
-                              ✓ {t("alreadyDefined")}
+                              ✓ {t('alreadyDefined')}
                             </span>
                           )}
                         </td>
                         <td className="px-4 py-3 align-top">
-                          {step === "review_words" ? (
+                          {step === 'review_words' ? (
                             isPreFilled ? (
-                              <span className="text-sm text-muted-foreground">{row.canonical_form}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {row.canonical_form}
+                              </span>
                             ) : (
-                              <span className="text-muted-foreground">{t("waitingForJson")}</span>
+                              <span className="text-muted-foreground">{t('waitingForJson')}</span>
                             )
                           ) : (
                             <Input
                               value={row.canonical_form}
-                              onChange={(e) => handleUpdateRow(row.id, "canonical_form", e.target.value)}
+                              onChange={(e) =>
+                                handleUpdateRow(row.id, 'canonical_form', e.target.value)
+                              }
                               className="h-8 text-sm"
                             />
                           )}
                         </td>
                         <td className="px-4 py-3 align-top">
-                          {step === "review_words" ? (
+                          {step === 'review_words' ? (
                             isPreFilled ? (
-                              <span className="text-sm text-muted-foreground line-clamp-2">{row.explanation}</span>
+                              <span className="text-sm text-muted-foreground line-clamp-2">
+                                {row.explanation}
+                              </span>
                             ) : (
-                              <span className="text-muted-foreground">{t("pasteJsonHintInline")}</span>
+                              <span className="text-muted-foreground">
+                                {t('pasteJsonHintInline')}
+                              </span>
                             )
                           ) : (
                             <textarea
                               value={row.explanation}
-                              onChange={(e) => handleUpdateRow(row.id, "explanation", e.target.value)}
+                              onChange={(e) =>
+                                handleUpdateRow(row.id, 'explanation', e.target.value)
+                              }
                               className="w-full min-h-[60px] text-sm p-2 rounded-md border border-input bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring custom-scrollbar"
                             />
                           )}
@@ -562,13 +578,17 @@ export function VocabularyReviewModal({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border shrink-0 bg-muted/20 flex gap-3 justify-end items-center">
-          {step === "review_words" && rows.length > 0 && (
+          {step === 'review_words' && rows.length > 0 && (
             <>
-              <Button variant="ghost" onClick={() => setStep("review_ai")} className="mr-auto text-muted-foreground">
-                {t("fillManually")}
+              <Button
+                variant="ghost"
+                onClick={() => setStep('review_ai')}
+                className="mr-auto text-muted-foreground"
+              >
+                {t('fillManually')}
               </Button>
-              <Button variant="outline" onClick={() => setStep("paste_json")}>
-                {t("goToPasteJson")}
+              <Button variant="outline" onClick={() => setStep('paste_json')}>
+                {t('goToPasteJson')}
               </Button>
               <Button onClick={handleGoToPromptEditor} disabled={isLoadingPrompt} className="gap-2">
                 {isLoadingPrompt ? (
@@ -576,46 +596,42 @@ export function VocabularyReviewModal({
                 ) : (
                   <Copy className="h-4 w-4" />
                 )}
-                {isLoadingPrompt ? t("loadingPrompt") : t("goToPromptEditor")}
+                {isLoadingPrompt ? t('loadingPrompt') : t('goToPromptEditor')}
               </Button>
             </>
           )}
 
-          {step === "prompt_editor" && (
+          {step === 'prompt_editor' && (
             <>
-              <Button variant="outline" onClick={() => setStep("review_words")} className="gap-2">
+              <Button variant="outline" onClick={() => setStep('review_words')} className="gap-2">
                 <ChevronLeft className="h-4 w-4" />
-                {t("backToSelection")}
+                {t('backToSelection')}
               </Button>
               <Button
                 onClick={handleCopyAndContinue}
                 disabled={!editablePrompt.trim()}
                 className="gap-2"
               >
-                {promptCopied ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-                {t("copyAndContinue")}
+                {promptCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {t('copyAndContinue')}
               </Button>
             </>
           )}
 
-          {step === "paste_json" && (
+          {step === 'paste_json' && (
             <>
-              <Button variant="outline" onClick={() => setStep("prompt_editor")} className="gap-2">
+              <Button variant="outline" onClick={() => setStep('prompt_editor')} className="gap-2">
                 <ChevronLeft className="h-4 w-4" />
-                {t("backToPromptEditor")}
+                {t('backToPromptEditor')}
               </Button>
               <Button onClick={handleApplyJson} disabled={!pastedJson.trim()} className="gap-2">
                 <FileJson className="h-4 w-4" />
-                {t("applyJson")}
+                {t('applyJson')}
               </Button>
             </>
           )}
 
-          {step === "review_ai" && (
+          {step === 'review_ai' && (
             <>
               {showPersistOption && (
                 <div className="mr-auto flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2">
@@ -626,18 +642,26 @@ export function VocabularyReviewModal({
                     onChange={(e) => setPersistReviewedTranscript(e.target.checked)}
                     className="h-4 w-4 rounded border border-input"
                   />
-                  <Label htmlFor="persist-reviewed-transcript" className="text-xs text-muted-foreground leading-5">
-                    {t("persistReviewedTranscript")}
+                  <Label
+                    htmlFor="persist-reviewed-transcript"
+                    className="text-xs text-muted-foreground leading-5"
+                  >
+                    {t('persistReviewedTranscript')}
                   </Label>
                 </div>
               )}
-              <Button variant="outline" onClick={() => setStep("paste_json")} disabled={isSaving} className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setStep('paste_json')}
+                disabled={isSaving}
+                className="gap-2"
+              >
                 <ChevronLeft className="h-4 w-4" />
-                {t("backToPasteJson")}
+                {t('backToPasteJson')}
               </Button>
               <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                 <Save className="h-4 w-4" />
-                {isSaving ? t("saving") : t("saveToDb")}
+                {isSaving ? t('saving') : t('saveToDb')}
               </Button>
             </>
           )}

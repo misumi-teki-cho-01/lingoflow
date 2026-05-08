@@ -1,7 +1,7 @@
-"use client";
-import { useEffect } from "react";
-import { useRouter } from "@/i18n/navigation";
-import { createClient } from "@/lib/supabase/client";
+'use client';
+import { useEffect } from 'react';
+import { useRouter } from '@/i18n/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export function SessionGuard() {
   const router = useRouter();

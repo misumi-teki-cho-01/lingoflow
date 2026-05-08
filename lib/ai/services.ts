@@ -1,6 +1,6 @@
-import type { TranscriptSegment } from "@/types/transcript";
-import { getGemini2_0FlashModel } from "./client";
-import { getEnhancementPrompt, getExplainDictationPrompt } from "./prompts";
+import type { TranscriptSegment } from '@/types/transcript';
+import { getGemini2_0FlashModel } from './client';
+import { getEnhancementPrompt, getExplainDictationPrompt } from './prompts';
 
 export interface EnhancementResult {
   segments: TranscriptSegment[];
@@ -30,7 +30,7 @@ export async function enhanceSubtitlesForLearners(
 
     const model = getGemini2_0FlashModel();
     const result = await model.generateContent([
-      getEnhancementPrompt("en"),
+      getEnhancementPrompt('en'),
       `\nTranscript:\n${input}`,
     ]);
 
@@ -38,33 +38,33 @@ export async function enhanceSubtitlesForLearners(
 
     // Parse the JSON response
     const jsonStr = responseText
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```$/i, "")
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
       .trim();
 
     const enhanced = JSON.parse(jsonStr) as TranscriptSegment[];
 
     // Strict validation
     if (!Array.isArray(enhanced) || enhanced.length === 0) {
-      return { segments, enhanced: false, error: "Empty AI response" };
+      return { segments, enhanced: false, error: 'Empty AI response' };
     }
 
     const isValid = enhanced.every(
       (s) =>
-        typeof s.start_time === "number" &&
-        typeof s.end_time === "number" &&
-        typeof s.text === "string" &&
+        typeof s.start_time === 'number' &&
+        typeof s.end_time === 'number' &&
+        typeof s.text === 'string' &&
         s.text.length > 0,
     );
 
     if (!isValid) {
-      return { segments, enhanced: false, error: "Invalid AI response format" };
+      return { segments, enhanced: false, error: 'Invalid AI response format' };
     }
 
     return { segments: enhanced, enhanced: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("[AI Service: Enhance] Failed:", message);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[AI Service: Enhance] Failed:', message);
     return { segments, enhanced: false, error: message };
   }
 }
@@ -81,25 +81,28 @@ export interface VocabularyExplanation {
 export async function explainTextVocabulary(
   text: string,
   wordsToExplain: string[],
-  locale: string = "zh"
+  locale: string = 'zh',
 ): Promise<Record<string, VocabularyExplanation>> {
   if (!text || wordsToExplain.length === 0) return {};
 
   try {
     const promptTemplate = getExplainDictationPrompt(locale);
     const prompt = promptTemplate
-      .replace("{{text}}", text)
-      .replace("{{words}}", JSON.stringify(wordsToExplain, null, 2));
+      .replace('{{text}}', text)
+      .replace('{{words}}', JSON.stringify(wordsToExplain, null, 2));
 
     const model = getGemini2_0FlashModel();
     const result = await model.generateContent(prompt);
 
     const responseText = result.response.text();
-    const cleanJsonStr = responseText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+    const cleanJsonStr = responseText
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
 
     return JSON.parse(cleanJsonStr);
   } catch (error) {
-    console.error("[AI Service: Explain] Failed:", error);
-    throw new Error("Failed to parse AI output into JSON.");
+    console.error('[AI Service: Explain] Failed:', error);
+    throw new Error('Failed to parse AI output into JSON.');
   }
 }

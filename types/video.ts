@@ -6,20 +6,9 @@ export interface VideoSource {
   url: string;
 }
 
-export type PlayerState =
-  | 'unstarted'
-  | 'playing'
-  | 'paused'
-  | 'buffering'
-  | 'ended'
-  | 'cued';
+export type PlayerState = 'unstarted' | 'playing' | 'paused' | 'buffering' | 'ended' | 'cued';
 
-export type PlayerEvent =
-  | 'ready'
-  | 'stateChange'
-  | 'timeUpdate'
-  | 'error'
-  | 'playbackRateChange';
+export type PlayerEvent = 'ready' | 'stateChange' | 'timeUpdate' | 'error' | 'playbackRateChange';
 
 export type PlayerEventCallback = (data: unknown) => void;
 
@@ -31,11 +20,7 @@ export interface PlayerOptions {
 }
 
 export interface VideoProvider {
-  initialize(
-    container: HTMLDivElement,
-    videoId: string,
-    options?: PlayerOptions,
-  ): Promise<void>;
+  initialize(container: HTMLDivElement, videoId: string, options?: PlayerOptions): Promise<void>;
   destroy(): void;
   play(): void;
   pause(): void;

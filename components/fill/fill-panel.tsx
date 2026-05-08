@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { ScrollText, MousePointerClick, Check, Sparkles } from "lucide-react";
-import { DictionaryPopover } from "@/components/scribe/dictionary-popover";
-import { FillSegmentRow, type HintLevel } from "./fill-segment-row";
-import type { TranscriptSegment, DragState } from "@/types/transcript";
-import type { VocabularyExplanation } from "@/lib/ai/services";
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { ScrollText, MousePointerClick, Check, Sparkles } from 'lucide-react';
+import { DictionaryPopover } from '@/components/scribe/dictionary-popover';
+import { FillSegmentRow, type HintLevel } from './fill-segment-row';
+import type { TranscriptSegment, DragState } from '@/types/transcript';
+import type { VocabularyExplanation } from '@/lib/ai/services';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -51,10 +51,10 @@ export function FillPanel({
   onExplainWords,
   onClearWords,
 }: FillPanelProps) {
-  const t = useTranslations("studyRoom");
-  const tTranscript = useTranslations("transcript");
+  const t = useTranslations('studyRoom');
+  const tTranscript = useTranslations('transcript');
 
-  const [hintLevel, setHintLevel] = useState<HintLevel>("width");
+  const [hintLevel, setHintLevel] = useState<HintLevel>('width');
   // segIdx → (wordIdx → typed value)
   const [answers, setAnswers] = useState<Map<number, Map<number, string>>>(new Map());
   const [checkedSegments, setCheckedSegments] = useState<Set<number>>(new Set());
@@ -62,7 +62,10 @@ export function FillPanel({
 
   // Definition popover state (panel-level, so it appears above scroll container)
   const [popup, setPopup] = useState<{
-    visible: boolean; x: number; y: number; wordData?: VocabularyExplanation;
+    visible: boolean;
+    x: number;
+    y: number;
+    wordData?: VocabularyExplanation;
   }>({ visible: false, x: 0, y: 0 });
 
   const definitionKeyMap = useMemo(() => {
@@ -77,7 +80,7 @@ export function FillPanel({
     setPopup((prev) =>
       prev.visible && prev.wordData === wordData
         ? { ...prev, visible: false }
-        : { visible: true, x, y, wordData }
+        : { visible: true, x, y, wordData },
     );
   };
 
@@ -87,7 +90,7 @@ export function FillPanel({
   // Auto-scroll to active segment
   useEffect(() => {
     if (activeSegmentIndex < 0 || !isAutoScrollEnabled) return;
-    activeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [activeSegmentIndex, isAutoScrollEnabled]);
 
   // ── Answer handlers ──────────────────────────────────────────────────────────
@@ -143,10 +146,10 @@ export function FillPanel({
         </div>
         <div className="max-w-[200px]">
           <p className="font-semibold">
-            {errorMessage ? tTranscript("fetchFailed") : tTranscript("noSubtitles")}
+            {errorMessage ? tTranscript('fetchFailed') : tTranscript('noSubtitles')}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {errorMessage ?? tTranscript("noSubtitlesDesc")}
+            {errorMessage ?? tTranscript('noSubtitlesDesc')}
           </p>
         </div>
       </div>
@@ -156,9 +159,9 @@ export function FillPanel({
   // ── Main panel ────────────────────────────────────────────────────────────────
 
   const HINT_OPTIONS: { value: HintLevel; label: string }[] = [
-    { value: "none",   label: t("fillHintNone") },
-    { value: "width",  label: t("fillHintWidth") },
-    { value: "reveal", label: t("fillHintReveal") },
+    { value: 'none', label: t('fillHintNone') },
+    { value: 'width', label: t('fillHintWidth') },
+    { value: 'reveal', label: t('fillHintReveal') },
   ];
 
   return (
@@ -167,7 +170,7 @@ export function FillPanel({
       <div className="flex flex-col border-b border-border bg-muted/30 p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold tracking-tight">{t("fillMode")}</span>
+            <span className="text-sm font-bold tracking-tight">{t('fillMode')}</span>
 
             {/* Hint level selector */}
             <div className="flex items-center gap-1 rounded-full border border-border bg-background/60 p-0.5">
@@ -177,8 +180,8 @@ export function FillPanel({
                   onClick={() => setHintLevel(opt.value)}
                   className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all ${
                     hintLevel === opt.value
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {opt.label}
@@ -195,7 +198,7 @@ export function FillPanel({
                 className="h-7 text-xs px-2 text-muted-foreground"
                 onClick={onClearWords}
               >
-                {tTranscript("clearSelection")}
+                {tTranscript('clearSelection')}
               </Button>
             )}
             <Button
@@ -203,11 +206,11 @@ export function FillPanel({
               size="icon"
               className={`h-8 w-8 transition-colors ${
                 isAutoScrollEnabled
-                  ? "text-primary bg-primary/10 hover:bg-primary/20"
-                  : "text-muted-foreground"
+                  ? 'text-primary bg-primary/10 hover:bg-primary/20'
+                  : 'text-muted-foreground'
               }`}
               onClick={() => setIsAutoScrollEnabled((v) => !v)}
-              title={tTranscript("autoScroll")}
+              title={tTranscript('autoScroll')}
             >
               <MousePointerClick className="h-4 w-4" />
             </Button>
@@ -262,26 +265,31 @@ export function FillPanel({
             size="sm"
             onClick={() => {
               setIsAutoScrollEnabled(true);
-              activeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+              activeRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+              });
             }}
             className="h-9 shadow-lg gap-2 rounded-full"
           >
             <Check className="h-3.5 w-3.5" />
-            <span>{tTranscript("followProgress")}</span>
+            <span>{tTranscript('followProgress')}</span>
           </Button>
         </div>
       )}
 
       {/* "Explain N words" floating button */}
       {selectionCount > 0 && (
-        <div className={`absolute ${!isAutoScrollEnabled && activeSegmentIndex >= 0 ? "bottom-16" : "bottom-4"} left-0 right-0 flex justify-center px-4 animate-in fade-in slide-in-from-bottom-2 z-10`}>
+        <div
+          className={`absolute ${!isAutoScrollEnabled && activeSegmentIndex >= 0 ? 'bottom-16' : 'bottom-4'} left-0 right-0 flex justify-center px-4 animate-in fade-in slide-in-from-bottom-2 z-10`}
+        >
           <Button
             size="sm"
             onClick={onExplainWords}
             className="h-9 shadow-lg gap-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            {tTranscript("explainWords", { count: selectionCount })}
+            {tTranscript('explainWords', { count: selectionCount })}
           </Button>
         </div>
       )}
