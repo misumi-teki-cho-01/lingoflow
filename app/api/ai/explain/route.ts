@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { explainTextVocabulary } from "@/lib/ai/services";
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return "Internal server error";
+}
+
 export async function POST(request: Request) {
   try {
     const { text, wordsToExplain, locale = "zh" } = await request.json();
@@ -20,13 +26,12 @@ export async function POST(request: Request) {
 
     const definitions = await explainTextVocabulary(text, wordsToExplain, locale);
     return NextResponse.json({ definitions });
-
-  } catch (error: any) {
-    console.error("[Explain API] Error:", error.message);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    console.error("[Explain API] Error:", message);
     return NextResponse.json(
-      { error: error?.message || "Internal server error" },
+      { error: message },
       { status: 500 },
     );
   }
 }
-

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useVideoPlayer } from "@/hooks/use-video-player";
 import { useTranscriptSync } from "@/hooks/use-transcript-sync";
 import { useVocabularyReview } from "@/hooks/use-vocabulary-review";
@@ -82,7 +82,6 @@ export function StudyRoom({
   defaultMode = "cc",
 }: StudyRoomProps) {
   const t = useTranslations("studyRoom");
-  const locale = useLocale();
 
   const [mode, setMode] = useState<StudyMode>(defaultMode);
   const [showCC, setShowCC] = useState(false);
@@ -366,7 +365,7 @@ export function StudyRoom({
         { id, segmentIndex, startWordIndex: minIdx, endWordIndex: maxIdx, text: phrase },
       ];
     });
-  }, [dragState, liveSegments, definitions]);
+  }, [dragState, liveSegments]);
 
   const handleCCWordsClear = useCallback(() => {
     setCcSelections([]);
@@ -430,9 +429,11 @@ export function StudyRoom({
   // ── Save vocabulary — CC ──────────────────────────────────────────────────
   const handleSaveCCVocabulary = async (
     finalData: Record<string, VocabularyExplanation>,
-    _transforms: { id: string; newText: string }[],
-    _options: { persistReviewedTranscript: boolean }
+    transforms: { id: string; newText: string }[],
+    options: { persistReviewedTranscript: boolean }
   ) => {
+    void transforms;
+    void options;
     const { saveVocabularyToDB } = await import("@/lib/api/ai");
     // Merge existing definitions so the server can resolve vocabulary_id
     // for selections that already had a saved definition (and were not re-reviewed).

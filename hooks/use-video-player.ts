@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { PlayerState, VideoProvider } from "@/types/video";
 import { createVideoProvider, detectVideoSource } from "@/lib/video-providers";
@@ -61,11 +61,12 @@ export function useVideoPlayer({
   const isProgrammaticPause = useRef(false);
   const lastPlayTimestamp = useRef(0);
 
-  // Store latest callbacks in refs to avoid stale closures
-  const onTimeUpdateRef = useRef(onTimeUpdate);
-  onTimeUpdateRef.current = onTimeUpdate;
-  const onStateChangeRef = useRef(onStateChange);
-  onStateChangeRef.current = onStateChange;
+  const handleTimeUpdate = useEffectEvent((time: number) => {
+    onTimeUpdate?.(time);
+  });
+  const handleStateChange = useEffectEvent((state: PlayerState) => {
+    onStateChange?.(state);
+  });
 
   // Initialize player
   useEffect(() => {
@@ -86,13 +87,13 @@ export function useVideoPlayer({
     provider.on("timeUpdate", (time) => {
       const t = time as number;
       setCurrentTime(t);
-      onTimeUpdateRef.current?.(t);
+      handleTimeUpdate(t);
     });
 
     provider.on("stateChange", (state) => {
       const s = state as PlayerState;
       setPlayerState(s);
-      onStateChangeRef.current?.(s);
+      handleStateChange(s);
     });
 
     provider.initialize(container, parsed.videoId).catch(console.error);

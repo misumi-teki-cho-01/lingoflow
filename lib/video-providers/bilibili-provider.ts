@@ -6,23 +6,32 @@ import type { VideoProvider, PlayerState, PlayerEvent, PlayerEventCallback, Play
  */
 export class BilibiliProvider implements VideoProvider {
   async initialize(
-    _container: HTMLDivElement,
-    _videoId: string,
-    _options?: PlayerOptions,
+    container: HTMLDivElement,
+    videoId: string,
+    options?: PlayerOptions,
   ): Promise<void> {
+    void container;
+    void videoId;
+    void options;
     throw new Error("BilibiliProvider is not yet implemented. Coming in Phase 5.");
   }
 
   destroy(): void {}
   play(): void {}
   pause(): void {}
-  seekTo(_timeSeconds: number): void {}
+  seekTo(timeSeconds: number): void { void timeSeconds; }
   getCurrentTime(): number { return 0; }
   getDuration(): number { return 0; }
   getPlayerState(): PlayerState { return "unstarted"; }
-  setPlaybackRate(_rate: number): void {}
-  setVolume(_volume: number): void {}
+  setPlaybackRate(rate: number): void { void rate; }
+  setVolume(volume: number): void { void volume; }
   getVolume(): number { return 100; }
-  on(_event: PlayerEvent, _callback: PlayerEventCallback): void {}
-  off(_event: PlayerEvent, _callback: PlayerEventCallback): void {}
+  on(event: PlayerEvent, callback: PlayerEventCallback): void {
+    void event;
+    void callback;
+  }
+  off(event: PlayerEvent, callback: PlayerEventCallback): void {
+    void event;
+    void callback;
+  }
 }

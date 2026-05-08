@@ -59,9 +59,8 @@ export async function importVideo(
   }
 
   // ── 5. Persist video ───────────────────────────────────────────────────────
-  let video;
   try {
-    video = await insertVideo({
+    await insertVideo({
       url: parsed.url,
       source_type: source,
       video_ext_id: videoId,
@@ -70,7 +69,7 @@ export async function importVideo(
       thumbnail_url: meta.thumbnailUrl || null,
       language: "en",
     });
-  } catch (videoErr) {
+  } catch {
     return { error: "saveFailed" };
   }
 

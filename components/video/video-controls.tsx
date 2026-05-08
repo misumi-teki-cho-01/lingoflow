@@ -28,18 +28,15 @@ export function VideoControls({ player }: VideoControlsProps) {
     isMuted,
   } = player;
 
+  const [seekStep, setSeekStep] = useState(() => {
+    if (typeof window === "undefined") return 5;
+    const saved = window.localStorage.getItem("lingoflow-seek-step");
+    const parsed = saved ? Number(saved) : NaN;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [dragValue, setDragValue] = useState(0);
   const [rate, setRate] = useState(1);
-  const [seekStep, setSeekStep] = useState(5);
-
-  // Load saved seekStep from localStorage on mount.
-  useEffect(() => {
-    const saved = localStorage.getItem("lingoflow-seek-step");
-    if (saved) {
-      setSeekStep(Number(saved));
-    }
-  }, []);
 
   const handleSeekStepChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = Number(e.target.value);

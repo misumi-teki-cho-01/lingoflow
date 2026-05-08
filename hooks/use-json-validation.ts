@@ -17,6 +17,24 @@ export interface JsonValidationState {
   jumpToError: (textareaEl: HTMLTextAreaElement | null) => void;
 }
 
+interface ValidationSnapshot {
+  status: JsonValidationStatus;
+  errorLine: number | null;
+  errorCol: number | null;
+  errorMessage: string | null;
+  itemCount: number | null;
+  correctedText: string | null;
+}
+
+const EMPTY_VALIDATION_STATE: ValidationSnapshot = {
+  status: "idle",
+  errorLine: null,
+  errorCol: null,
+  errorMessage: null,
+  itemCount: null,
+  correctedText: null,
+};
+
 // ── Auto-fix pipeline ─────────────────────────────────────────────────────
 
 /**
@@ -147,25 +165,15 @@ export function useJsonValidation(
   mode: JsonValidationMode,
   debounceMs = 400
 ): JsonValidationState {
-  const [status, setStatus] = useState<JsonValidationStatus>("idle");
-  const [errorLine, setErrorLine] = useState<number | null>(null);
-  const [errorCol, setErrorCol] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [itemCount, setItemCount] = useState<number | null>(null);
-  const [correctedText, setCorrectedText] = useState<string | null>(null);
+  const [validation, setValidation] = useState<ValidationSnapshot>(EMPTY_VALIDATION_STATE);
   const errorCharPosRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasText = text.trim().length > 0;
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
 
-    if (!text.trim()) {
-      setStatus("idle");
-      setErrorLine(null);
-      setErrorCol(null);
-      setErrorMessage(null);
-      setItemCount(null);
-      setCorrectedText(null);
+    if (!hasText) {
       errorCharPosRef.current = null;
       return;
     }
@@ -174,12 +182,14 @@ export function useJsonValidation(
       try {
         const parsed = JSON.parse(text);
         const count = countItems(parsed, mode);
-        setStatus("valid");
-        setErrorLine(null);
-        setErrorCol(null);
-        setErrorMessage(null);
-        setItemCount(count);
-        setCorrectedText(null);
+        setValidation({
+          status: "valid",
+          errorLine: null,
+          errorCol: null,
+          errorMessage: null,
+          itemCount: count,
+          correctedText: null,
+        });
         errorCharPosRef.current = null;
       } catch (err) {
         if (!(err instanceof SyntaxError)) return;
@@ -190,12 +200,14 @@ export function useJsonValidation(
           try {
             const parsedFixed = JSON.parse(fixed);
             const count = countItems(parsedFixed, mode);
-            setStatus("valid");
-            setErrorLine(null);
-            setErrorCol(null);
-            setErrorMessage(null);
-            setItemCount(count);
-            setCorrectedText(fixed);
+            setValidation({
+              status: "valid",
+              errorLine: null,
+              errorCol: null,
+              errorMessage: null,
+              itemCount: count,
+              correctedText: fixed,
+            });
             errorCharPosRef.current = null;
             return;
           } catch {
@@ -205,17 +217,19 @@ export function useJsonValidation(
 
         // ── Normal invalid path ───────────────────────────────────────────
         const loc = extractErrorLocation(text, err);
-        setStatus("invalid");
-        setErrorLine(loc?.line ?? null);
-        setErrorCol(loc?.col ?? null);
         // Simplify the error message for display
         const raw = err.message
           .replace(/^JSON\.parse:\s*/i, "")
           .replace(/\s*at position \d+/i, "")
           .replace(/\s*in JSON\s*/i, "");
-        setErrorMessage(raw);
-        setItemCount(null);
-        setCorrectedText(null);
+        setValidation({
+          status: "invalid",
+          errorLine: loc?.line ?? null,
+          errorCol: loc?.col ?? null,
+          errorMessage: raw,
+          itemCount: null,
+          correctedText: null,
+        });
         errorCharPosRef.current = loc?.charPos ?? null;
       }
     }, debounceMs);
@@ -223,7 +237,7 @@ export function useJsonValidation(
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [text, mode, debounceMs]);
+  }, [text, mode, debounceMs, hasText]);
 
   const jumpToError = useCallback((textareaEl: HTMLTextAreaElement | null) => {
     if (!textareaEl || errorCharPosRef.current === null) return;
@@ -241,5 +255,7 @@ export function useJsonValidation(
     textareaEl.scrollTop = Math.max(0, (lines.length - 3) * lineHeight);
   }, []);
 
-  return { status, errorLine, errorCol, errorMessage, itemCount, correctedText, jumpToError };
+  const currentValidation = hasText ? validation : EMPTY_VALIDATION_STATE;
+
+  return { ...currentValidation, jumpToError };
 }
