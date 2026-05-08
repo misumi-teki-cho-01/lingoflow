@@ -1,15 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Play, Pause, Volume2, VolumeX, Rewind, FastForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatTime } from '@/lib/utils/format';
 import type { UseVideoPlayerReturn } from '@/hooks/use-video-player';
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const SEEK_STEP_KEY = 'lingoflow-seek-step';
+const SEEK_STEP_CHANGED_EVENT = 'lingoflow-seek-step-change';
+const DEFAULT_SEEK_STEP = 5;
 
 interface VideoControlsProps {
   player: UseVideoPlayerReturn;
+}
+
+function getSeekStepSnapshot() {
+  if (typeof window === 'undefined') return DEFAULT_SEEK_STEP;
+  const saved = window.localStorage.getItem(SEEK_STEP_KEY);
+  const parsed = saved ? Number(saved) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SEEK_STEP;
+}
+
+function subscribeToSeekStep(onStoreChange: () => void) {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
+  window.addEventListener('storage', onStoreChange);
+  window.addEventListener(SEEK_STEP_CHANGED_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener('storage', onStoreChange);
+    window.removeEventListener(SEEK_STEP_CHANGED_EVENT, onStoreChange);
+  };
 }
 
 export function VideoControls({ player }: VideoControlsProps) {
@@ -28,20 +52,19 @@ export function VideoControls({ player }: VideoControlsProps) {
     isMuted,
   } = player;
 
-  const [seekStep, setSeekStep] = useState(() => {
-    if (typeof window === 'undefined') return 5;
-    const saved = window.localStorage.getItem('lingoflow-seek-step');
-    const parsed = saved ? Number(saved) : NaN;
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
-  });
+  const seekStep = useSyncExternalStore(
+    subscribeToSeekStep,
+    getSeekStepSnapshot,
+    () => DEFAULT_SEEK_STEP,
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [dragValue, setDragValue] = useState(0);
   const [rate, setRate] = useState(1);
 
   const handleSeekStepChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = Number(e.target.value);
-    setSeekStep(val);
-    localStorage.setItem('lingoflow-seek-step', String(val));
+    window.localStorage.setItem(SEEK_STEP_KEY, String(val));
+    window.dispatchEvent(new Event(SEEK_STEP_CHANGED_EVENT));
   };
 
   useEffect(() => {
