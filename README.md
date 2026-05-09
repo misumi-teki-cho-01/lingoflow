@@ -1,6 +1,6 @@
 ## LingoFlow
 
-LingoFlow is a multilingual shadowing and intensive-reading app built with Next.js, Supabase, and Gemini.
+LingoFlow is a multilingual shadowing and intensive-reading app built with Next.js and Supabase.
 
 ## Getting Started
 
@@ -21,8 +21,7 @@ cp .env.example .env.local
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-GEMINI_API_KEY=
+BILIBILI_COOKIE=
 ```
 
 4. Start the development server:
@@ -44,12 +43,12 @@ This project can be deployed directly to Vercel as a standard Next.js app.
 ```bash
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-GEMINI_API_KEY
+BILIBILI_COOKIE
 ```
 
 4. Deploy.
 
 ## Notes
 
+- `BILIBILI_COOKIE` is optional and only needed when Bilibili subtitle access requires authenticated cookies.
 - The app now uses local/system fonts during build, so deployment does not depend on external font downloads.

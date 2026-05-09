@@ -86,6 +86,11 @@ export async function explainTextVocabulary(
   if (!text || wordsToExplain.length === 0) return {};
 
   try {
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn('[AI Service: Explain] Skipping explanation because GEMINI_API_KEY is not set.');
+      return {};
+    }
+
     const promptTemplate = getExplainDictationPrompt(locale);
     const prompt = promptTemplate
       .replace('{{text}}', text)
@@ -103,6 +108,6 @@ export async function explainTextVocabulary(
     return JSON.parse(cleanJsonStr);
   } catch (error) {
     console.error('[AI Service: Explain] Failed:', error);
-    throw new Error('Failed to parse AI output into JSON.');
+    return {};
   }
 }
