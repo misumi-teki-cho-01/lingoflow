@@ -7,6 +7,7 @@ import { useTranscriptSync } from '@/hooks/use-transcript-sync';
 import { useVocabularyReview } from '@/hooks/use-vocabulary-review';
 import { VideoControls } from '@/components/video/video-controls';
 import { TranscriptPanel } from '@/components/transcript/transcript-panel';
+import { SubtitleUploadPanel } from '@/components/transcript/subtitle-upload-panel';
 import { FillPanel } from '@/components/fill/fill-panel';
 import { EchoEditor } from '@/components/scribe/echo-editor';
 import { VocabularyReviewModal } from './vocabulary-review-modal';
@@ -24,7 +25,7 @@ import {
 import { saveEnhancedTranscript } from '@/lib/api/transcripts';
 import type { TranscriptSegment, CcSelection, DragState } from '@/types/transcript';
 import type { TranscriptSource } from '@/lib/pipeline/transcription-pipeline';
-import type { YouTubeMeta } from '@/lib/utils/youtube-meta';
+import type { VideoMeta } from '@/lib/utils/video-meta';
 import type { VocabularyExplanation } from '@/lib/ai/services';
 import {
   ChevronLeft,
@@ -45,7 +46,7 @@ export type StudyMode = 'scribe' | 'cc' | 'fill';
 
 export interface StudyRoomProps {
   videoId: string;
-  videoMeta: YouTubeMeta;
+  videoMeta: VideoMeta;
   videoUrl: string;
   segments: TranscriptSegment[];
   initialDefinitions?: Record<string, VocabularyExplanation>;
@@ -98,6 +99,9 @@ export function StudyRoom({
 
   // Live segments (can be updated after AI enhancement)
   const [liveSegments, setLiveSegments] = useState<TranscriptSegment[]>(initialSegments);
+  const [currentTranscriptSource, setCurrentTranscriptSource] = useState<
+    TranscriptSource | undefined
+  >(transcriptSource);
   // Keep a stable reference to the original segments for "re-enhance from raw" option
   const rawSegmentsRef = useRef<TranscriptSegment[]>(initialSegments);
 
@@ -470,8 +474,19 @@ export function StudyRoom({
   const handleSaveEnhancedTranscript = async (enhanced: TranscriptSegment[]) => {
     await saveEnhancedTranscript(videoId, enhanced);
     setLiveSegments(enhanced);
+    setCurrentTranscriptSource('subtitle-enhanced');
     setShowEnhanceModal(false);
     showFeedback({ tone: 'success', text: t('enhanceSaveSuccess') });
+  };
+
+  const handleSubtitleUploaded = (segments: TranscriptSegment[]) => {
+    setLiveSegments(segments);
+    rawSegmentsRef.current = segments;
+    setCurrentTranscriptSource('subtitle-raw');
+    setCcSelections([]);
+    setPersistedCcSelections([]);
+    localStorage.removeItem(`cc-selections-${videoId}`);
+    showFeedback({ tone: 'success', text: t('subtitleUploadSuccess') });
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -709,7 +724,9 @@ export function StudyRoom({
 
         {/* Right — mode-specific panel */}
         <section className="p-4 flex flex-col min-h-0 overflow-hidden">
-          {mode === 'scribe' ? (
+          {liveSegments.length === 0 ? (
+            <SubtitleUploadPanel videoId={videoId} onUploaded={handleSubtitleUploaded} />
+          ) : mode === 'scribe' ? (
             <EchoEditor
               ref={editorRef}
               className="flex-1 min-h-0"
@@ -724,7 +741,7 @@ export function StudyRoom({
               segments={liveSegments}
               activeSegmentIndex={activeSegmentIndex}
               onSegmentClick={player.seekTo}
-              source={transcriptSource}
+              source={currentTranscriptSource}
               errorMessage={transcriptError}
               wordClickMode
               selectedPositionKeys={displayPositionKeys}

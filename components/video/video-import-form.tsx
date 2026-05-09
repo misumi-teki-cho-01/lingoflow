@@ -16,7 +16,6 @@ export function VideoImportForm() {
   // Server Action error codes → i18n strings
   const ERROR_MESSAGES: Record<string, string> = {
     invalidUrl: t('errorInvalidUrl'),
-    bilibiliUnsupported: t('errorBilibiliUnsupported'),
     noSubtitles: t('errorNoSubtitles'),
     saveFailed: t('errorSaveFailed'),
   };

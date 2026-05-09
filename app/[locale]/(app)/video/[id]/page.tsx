@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { StudyRoom, type StudyMode } from '@/components/study-room/study-room';
 import { runTranscriptionPipeline } from '@/lib/pipeline/transcription-pipeline';
-import { fetchYouTubeMeta, type YouTubeMeta } from '@/lib/utils/youtube-meta';
+import { fetchVideoMeta, type VideoMeta } from '@/lib/utils/video-meta';
 import { createClient } from '@/lib/supabase/server';
 import { getUserDictationByVideoId } from '@/lib/db/dictations';
 import {
@@ -11,15 +11,20 @@ import {
 import type { CcSelection, TranscriptSegment } from '@/types/transcript';
 import type { TranscriptSource } from '@/lib/pipeline/transcription-pipeline';
 import type { VocabularyExplanation } from '@/lib/ai/services';
+import type { VideoSourceType } from '@/types/video';
 
 const YT_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
+const BILI_BV_RE = /^BV[a-zA-Z0-9]+$/;
 
 // ── DB lookup ──────────────────────────────────────────────────────────────
 interface DBVideo {
   id: string;
+  url: string;
+  source_type: VideoSourceType;
   title: string | null;
   channel_name: string | null;
   thumbnail_url: string | null;
+  duration: number | null;
 }
 
 interface DBTranscript {
@@ -40,7 +45,7 @@ async function getVideoFromDB(videoExtId: string): Promise<{
 
     const { data: video } = await supabase
       .from('videos')
-      .select('id, title, channel_name, thumbnail_url')
+      .select('id, url, source_type, title, channel_name, thumbnail_url, duration')
       .eq('video_ext_id', videoExtId)
       .single();
 
@@ -101,10 +106,15 @@ export default async function VideoPage({
   const { locale, id } = await params;
   const { mode } = await searchParams;
 
-  if (!YT_ID_RE.test(id)) notFound();
+  const inferredSource: VideoSourceType | null = YT_ID_RE.test(id)
+    ? 'youtube'
+    : BILI_BV_RE.test(id)
+      ? 'bilibili'
+      : null;
+
+  if (!inferredSource) notFound();
 
   const defaultMode: StudyMode = mode === 'scribe' ? 'scribe' : 'cc';
-  const videoUrl = `https://www.youtube.com/watch?v=${id}`;
 
   // ── Try DB first ───────────────────────────────────────────────────────────
   const {
@@ -115,24 +125,28 @@ export default async function VideoPage({
     dictationHtml,
   } = await getVideoFromDB(id);
 
-  let videoMeta: YouTubeMeta;
+  let videoMeta: VideoMeta;
+  let videoUrl: string;
   let segments: TranscriptSegment[];
   let transcriptSource: TranscriptSource;
+  const sourceType = dbVideo?.source_type ?? inferredSource;
 
-  if (dbVideo && dbTranscript) {
-    // Fast path: everything is in DB already
+  if (dbVideo) {
+    // Fast path: video is in DB. Transcript may still be missing and can be uploaded manually.
     videoMeta = {
       title: dbVideo.title ?? '',
       channelName: dbVideo.channel_name ?? '',
       thumbnailUrl: dbVideo.thumbnail_url ?? '',
+      duration: dbVideo.duration ?? undefined,
     };
-    segments = dbTranscript.segments;
-    transcriptSource = dbTranscript.quality;
+    videoUrl = dbVideo.url;
+    segments = dbTranscript?.segments ?? [];
+    transcriptSource = dbTranscript?.quality ?? 'failed';
   } else {
     // Fallback: video accessed directly (not via import flow)
     const [meta, result] = await Promise.all([
-      fetchYouTubeMeta(id),
-      runTranscriptionPipeline('youtube', id, 'en'),
+      fetchVideoMeta(sourceType, id),
+      runTranscriptionPipeline(sourceType, id, 'en'),
     ]);
 
     if (result.source === 'failed' || result.segments.length === 0) {
@@ -140,6 +154,10 @@ export default async function VideoPage({
     }
 
     videoMeta = meta;
+    videoUrl =
+      sourceType === 'bilibili'
+        ? `https://www.bilibili.com/video/${id}`
+        : `https://www.youtube.com/watch?v=${id}`;
     segments = result.segments;
     transcriptSource = result.source;
   }

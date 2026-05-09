@@ -7,6 +7,7 @@ export interface VideoInsertData {
   title: string | null;
   channel_name: string | null;
   thumbnail_url: string | null;
+  duration?: number | null;
   language?: string;
 }
 
@@ -59,6 +60,7 @@ export async function insertVideo(videoData: VideoInsertData) {
       title: videoData.title,
       channel_name: videoData.channel_name,
       thumbnail_url: videoData.thumbnail_url,
+      duration: videoData.duration ?? null,
       language: videoData.language || 'en',
     })
     .select('id')

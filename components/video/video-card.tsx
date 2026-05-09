@@ -1,7 +1,8 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
-import { Play, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Play, Clock, Film } from 'lucide-react';
 import { formatTime } from '@/lib/utils/format';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN, ja, enUS, type Locale } from 'date-fns/locale';
@@ -39,8 +40,13 @@ const SOURCE_BADGE_STYLES: Record<string, string> = {
 export function VideoCard({ video }: VideoCardProps) {
   const locale = useLocale();
   const t = useTranslations('dashboard');
+  const [imageFailed, setImageFailed] = useState(false);
   const thumbnail =
-    video.thumbnail_url ?? `https://img.youtube.com/vi/${video.video_ext_id}/hqdefault.jpg`;
+    !imageFailed && video.thumbnail_url
+      ? video.thumbnail_url
+      : !imageFailed && video.source_type === 'youtube'
+        ? `https://img.youtube.com/vi/${video.video_ext_id}/hqdefault.jpg`
+        : null;
 
   const relativeTime = formatDistanceToNow(new Date(video.created_at), {
     addSuffix: true,
@@ -54,13 +60,20 @@ export function VideoCard({ video }: VideoCardProps) {
     >
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={thumbnail}
-          alt={video.title ?? 'Video thumbnail'}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
+        {thumbnail ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={thumbnail}
+            alt={video.title ?? 'Video thumbnail'}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
+            <Film className="h-10 w-10 opacity-40" />
+          </div>
+        )}
 
         {/* Play overlay */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/30">
@@ -68,14 +81,6 @@ export function VideoCard({ video }: VideoCardProps) {
             <Play className="h-5 w-5 fill-black text-black" />
           </div>
         </div>
-
-        {/* Duration badge */}
-        {video.duration != null && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded bg-black/75 px-1.5 py-0.5 text-[11px] text-white font-mono">
-            <Clock className="h-2.5 w-2.5" />
-            {formatTime(video.duration)}
-          </div>
-        )}
       </div>
 
       {/* Info */}
@@ -83,12 +88,20 @@ export function VideoCard({ video }: VideoCardProps) {
         <p className="text-sm font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
           {video.title ?? video.video_ext_id}
         </p>
-        <div className="mt-auto flex items-end justify-between gap-2">
-          <p suppressHydrationWarning className="text-[10px] text-muted-foreground/50">
-            {relativeTime}
-          </p>
+        <div className="mt-auto flex flex-col gap-2">
+          <div className="flex min-w-0 items-center gap-2 text-[10px] text-muted-foreground/60">
+            <p suppressHydrationWarning className="min-w-0 truncate">
+              {relativeTime}
+            </p>
+            {video.duration != null && (
+              <span className="flex shrink-0 items-center gap-1 font-mono">
+                <Clock className="h-2.5 w-2.5" />
+                {formatTime(video.duration)}
+              </span>
+            )}
+          </div>
 
-          <div className="flex max-w-[70%] min-w-0 items-center justify-end gap-1.5">
+          <div className="flex min-w-0 items-center gap-1.5">
             {video.channel_name && (
               <span className="min-w-0 truncate rounded-full bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">
                 {video.channel_name}
