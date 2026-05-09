@@ -42,6 +42,272 @@ function decodeHtmlEntities(text: string): string {
     .replace(/\n/g, ' ');
 }
 
+type YouTubeTranscriptFetchPhase = 'innertube' | 'watch-page' | 'caption-track' | 'unknown';
+
+interface YouTubeTranscriptRequestDiagnostic {
+  phase: YouTubeTranscriptFetchPhase;
+  url: string;
+  ok?: boolean;
+  status?: number;
+  statusText?: string;
+  contentType?: string | null;
+  bodySignals?: Record<string, boolean | number | string | null | undefined>;
+  error?: {
+    name: string;
+    message: string;
+  };
+}
+
+interface YouTubeTranscriptDiagnostics {
+  attempt: 'preferred-language' | 'fallback';
+  videoId: string;
+  preferredLang: string;
+  runtime: {
+    vercel: boolean;
+    region?: string;
+    nodeEnv?: string;
+  };
+  requests: YouTubeTranscriptRequestDiagnostic[];
+}
+
+type YouTubeTranscriptLikelyCause =
+  | 'network-fetch-error'
+  | 'youtube-rate-limited-or-forbidden'
+  | 'youtube-bot-protection'
+  | 'youtube-consent-page'
+  | 'youtube-sign-in-required'
+  | 'youtube-video-unavailable'
+  | 'preferred-language-unavailable'
+  | 'caption-track-fetch-failed'
+  | 'caption-track-empty-or-unparseable'
+  | 'no-caption-tracks-visible'
+  | 'watch-page-missing-player-response'
+  | 'unknown';
+
+function getYouTubeFetchPhase(url: string): YouTubeTranscriptFetchPhase {
+  if (url.includes('/youtubei/v1/player')) return 'innertube';
+  if (url.includes('/watch?')) return 'watch-page';
+  if (url.includes('/api/timedtext') || url.includes('/timedtext')) return 'caption-track';
+  return 'unknown';
+}
+
+function sanitizeDiagnosticUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (getYouTubeFetchPhase(url) === 'caption-track') {
+      return `${parsed.origin}${parsed.pathname}`;
+    }
+    return `${parsed.origin}${parsed.pathname}${parsed.search}`;
+  } catch {
+    return url;
+  }
+}
+
+function getRuntimeDiagnostic() {
+  return {
+    vercel: process.env.VERCEL === '1',
+    region: process.env.VERCEL_REGION,
+    nodeEnv: process.env.NODE_ENV,
+  };
+}
+
+function findInlineJsonSignal(html: string, key: string): boolean {
+  return html.includes(`var ${key} = `) || html.includes(`"${key}"`);
+}
+
+function bodySnippet(body: string): string {
+  return body.replace(/\s+/g, ' ').slice(0, 240);
+}
+
+async function inspectYouTubeTranscriptResponse(
+  phase: YouTubeTranscriptFetchPhase,
+  response: Response,
+): Promise<Record<string, boolean | number | string | null | undefined>> {
+  const contentType = response.headers.get('content-type') ?? '';
+  const text = await response.clone().text();
+
+  if (phase === 'innertube') {
+    if (contentType.includes('application/json')) {
+      try {
+        const json = JSON.parse(text) as {
+          captions?: {
+            playerCaptionsTracklistRenderer?: {
+              captionTracks?: unknown[];
+            };
+          };
+          playabilityStatus?: {
+            status?: string;
+            reason?: string;
+          };
+        };
+        const captionTracks = json.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+        return {
+          hasCaptionsObject: Boolean(json.captions),
+          hasCaptionTracklist: Boolean(json.captions?.playerCaptionsTracklistRenderer),
+          captionTrackCount: Array.isArray(captionTracks) ? captionTracks.length : 0,
+          playabilityStatus: json.playabilityStatus?.status,
+          playabilityReason: json.playabilityStatus?.reason,
+        };
+      } catch {
+        return {
+          jsonParseFailed: true,
+          snippet: bodySnippet(text),
+        };
+      }
+    }
+
+    return {
+      unexpectedContentType: contentType || null,
+      looksLikeHtml: text.includes('<html') || text.includes('<!doctype html'),
+      hasCaptcha: text.includes('g-recaptcha') || text.toLowerCase().includes('captcha'),
+      snippet: bodySnippet(text),
+    };
+  }
+
+  if (phase === 'watch-page') {
+    return {
+      hasPlayabilityStatus: text.includes('"playabilityStatus":'),
+      hasYtInitialPlayerResponse: findInlineJsonSignal(text, 'ytInitialPlayerResponse'),
+      hasCaptionTracks: text.includes('captionTracks'),
+      hasCaptionsRenderer: text.includes('playerCaptionsTracklistRenderer'),
+      hasCaptcha: text.includes('g-recaptcha') || text.toLowerCase().includes('captcha'),
+      hasConsent: text.includes('consent.youtube.com') || text.includes('Before you continue'),
+      hasSignInPrompt: text.includes('ServiceLogin') || text.includes('accounts.google.com'),
+      hasBotCheck: text.toLowerCase().includes('unusual traffic'),
+      hasUnavailableMessage: text.includes('Video unavailable'),
+      snippet: bodySnippet(text),
+    };
+  }
+
+  if (phase === 'caption-track') {
+    return {
+      cueCountSrv3: (text.match(/<p\s/g) ?? []).length,
+      cueCountClassic: (text.match(/<text\s/g) ?? []).length,
+      hasTranscriptText: text.includes('<transcript') || text.includes('<timedtext'),
+      snippet: bodySnippet(text),
+    };
+  }
+
+  return {
+    snippet: bodySnippet(text),
+  };
+}
+
+function createYouTubeDiagnosticFetch(diagnostics: YouTubeTranscriptDiagnostics): typeof fetch {
+  return async (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const phase = getYouTubeFetchPhase(url);
+
+    try {
+      const response = await fetch(input, init);
+      const diagnostic: YouTubeTranscriptRequestDiagnostic = {
+        phase,
+        url: sanitizeDiagnosticUrl(url),
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        contentType: response.headers.get('content-type'),
+      };
+
+      try {
+        diagnostic.bodySignals = await inspectYouTubeTranscriptResponse(phase, response);
+      } catch (error) {
+        diagnostic.error =
+          error instanceof Error
+            ? { name: error.name, message: error.message }
+            : { name: 'UnknownError', message: String(error) };
+      }
+
+      diagnostics.requests.push(diagnostic);
+      return response;
+    } catch (error) {
+      diagnostics.requests.push({
+        phase,
+        url: sanitizeDiagnosticUrl(url),
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message }
+            : { name: 'UnknownError', message: String(error) },
+      });
+      throw error;
+    }
+  };
+}
+
+function getSignal(
+  diagnostic: YouTubeTranscriptRequestDiagnostic | undefined,
+  key: string,
+): boolean | number | string | null | undefined {
+  return diagnostic?.bodySignals?.[key];
+}
+
+function inferYouTubeTranscriptLikelyCause(
+  diagnostics: YouTubeTranscriptDiagnostics,
+  error: unknown,
+): YouTubeTranscriptLikelyCause {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const innertube = diagnostics.requests.find((request) => request.phase === 'innertube');
+  const watchPage = diagnostics.requests.find((request) => request.phase === 'watch-page');
+  const captionTrack = diagnostics.requests.find((request) => request.phase === 'caption-track');
+
+  if (diagnostics.requests.some((request) => request.error)) return 'network-fetch-error';
+  if (diagnostics.requests.some((request) => request.status === 403 || request.status === 429)) {
+    return 'youtube-rate-limited-or-forbidden';
+  }
+  if (getSignal(watchPage, 'hasCaptcha') || getSignal(watchPage, 'hasBotCheck')) {
+    return 'youtube-bot-protection';
+  }
+  if (getSignal(watchPage, 'hasConsent')) return 'youtube-consent-page';
+  if (getSignal(watchPage, 'hasSignInPrompt')) return 'youtube-sign-in-required';
+  if (getSignal(watchPage, 'hasUnavailableMessage')) return 'youtube-video-unavailable';
+  if (errorMessage.includes('No transcripts are available in')) {
+    return 'preferred-language-unavailable';
+  }
+  if (captionTrack && !captionTrack.ok) return 'caption-track-fetch-failed';
+  if (
+    captionTrack?.ok &&
+    getSignal(captionTrack, 'cueCountSrv3') === 0 &&
+    getSignal(captionTrack, 'cueCountClassic') === 0
+  ) {
+    return 'caption-track-empty-or-unparseable';
+  }
+  if (watchPage && !getSignal(watchPage, 'hasPlayabilityStatus')) {
+    return 'watch-page-missing-player-response';
+  }
+  if (
+    getSignal(innertube, 'captionTrackCount') === 0 &&
+    watchPage &&
+    !getSignal(watchPage, 'hasCaptionTracks')
+  ) {
+    return 'no-caption-tracks-visible';
+  }
+
+  return 'unknown';
+}
+
+function logYouTubeTranscriptError(
+  message: string,
+  diagnostics: YouTubeTranscriptDiagnostics,
+  error: unknown,
+) {
+  console.error(message, {
+    videoId: diagnostics.videoId,
+    preferredLang: diagnostics.preferredLang,
+    attempt: diagnostics.attempt,
+    runtime: diagnostics.runtime,
+    likelyCause: inferYouTubeTranscriptLikelyCause(diagnostics, error),
+    requests: diagnostics.requests,
+    error:
+      error instanceof Error
+        ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          }
+        : String(error),
+  });
+}
+
 interface BilibiliPlayerResponse {
   code: number;
   message?: string;
@@ -220,9 +486,17 @@ export async function fetchYouTubeSubtitles(
   preferredLang: string = 'en',
 ): Promise<SubtitleFetchResult> {
   // Attempt 1: Fetch manual subtitles in preferred language
+  const preferredDiagnostics: YouTubeTranscriptDiagnostics = {
+    attempt: 'preferred-language',
+    videoId,
+    preferredLang,
+    runtime: getRuntimeDiagnostic(),
+    requests: [],
+  };
   try {
     const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
       lang: preferredLang,
+      fetch: createYouTubeDiagnosticFetch(preferredDiagnostics),
     });
 
     if (transcript.length > 0) {
@@ -233,23 +507,25 @@ export async function fetchYouTubeSubtitles(
       };
     }
   } catch (error) {
-    console.error('[YouTube Subtitles] Preferred-language fetch failed', {
-      videoId,
-      preferredLang,
-      error:
-        error instanceof Error
-          ? {
-              name: error.name,
-              message: error.message,
-              stack: error.stack,
-            }
-          : String(error),
-    });
+    logYouTubeTranscriptError(
+      '[YouTube Subtitles] Preferred-language fetch failed',
+      preferredDiagnostics,
+      error,
+    );
   }
 
   // Attempt 2: Fetch any available transcript (auto-generated fallback)
+  const fallbackDiagnostics: YouTubeTranscriptDiagnostics = {
+    attempt: 'fallback',
+    videoId,
+    preferredLang,
+    runtime: getRuntimeDiagnostic(),
+    requests: [],
+  };
   try {
-    const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+    const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
+      fetch: createYouTubeDiagnosticFetch(fallbackDiagnostics),
+    });
 
     if (transcript.length > 0) {
       return {
@@ -259,18 +535,11 @@ export async function fetchYouTubeSubtitles(
       };
     }
   } catch (error) {
-    console.error('[YouTube Subtitles] Fallback transcript fetch failed', {
-      videoId,
-      preferredLang,
-      error:
-        error instanceof Error
-          ? {
-              name: error.name,
-              message: error.message,
-              stack: error.stack,
-            }
-          : String(error),
-    });
+    logYouTubeTranscriptError(
+      '[YouTube Subtitles] Fallback transcript fetch failed',
+      fallbackDiagnostics,
+      error,
+    );
   }
 
   return { segments: [], source: 'none', language: preferredLang };
