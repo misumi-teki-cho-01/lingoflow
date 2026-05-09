@@ -229,10 +229,27 @@ export function StudyRoom({
   const editorRef = useRef<import('@/components/scribe/echo-editor').EchoEditorHandle>(null);
 
   // ── Stable player refs (for keyboard handler) ─────────────────────────────
+  const playerSeekRef = useRef(player.seekTo);
+  playerSeekRef.current = player.seekTo;
   const playerPauseRef = useRef(player.pause);
   playerPauseRef.current = player.pause;
   const playerPlayRef = useRef(player.play);
   playerPlayRef.current = player.play;
+  const playerStateRef = useRef(player.playerState);
+
+  useEffect(() => {
+    playerStateRef.current = player.playerState;
+  }, [player.playerState]);
+
+  const playFromSegment = useCallback((time: number, isActive: boolean) => {
+    if (isActive && playerStateRef.current === 'playing') {
+      playerPauseRef.current();
+      return;
+    }
+
+    playerSeekRef.current(time);
+    playerPlayRef.current();
+  }, []);
 
   // ── Shared export metadata ─────────────────────────────────────────────────
   const exportMeta = useMemo(
@@ -741,6 +758,8 @@ export function StudyRoom({
               segments={liveSegments}
               activeSegmentIndex={activeSegmentIndex}
               onSegmentClick={player.seekTo}
+              onSegmentPlay={playFromSegment}
+              isPlaying={player.playerState === 'playing'}
               source={currentTranscriptSource}
               errorMessage={transcriptError}
               wordClickMode

@@ -60,6 +60,11 @@ export function useVideoPlayer({
   const isRewinding = useRef(false);
   const isProgrammaticPause = useRef(false);
   const lastPlayTimestamp = useRef(0);
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+
+  useEffect(() => {
+    onTimeUpdateRef.current = onTimeUpdate;
+  }, [onTimeUpdate]);
 
   const handleTimeUpdate = useEffectEvent((time: number) => {
     onTimeUpdate?.(time);
@@ -168,7 +173,14 @@ export function useVideoPlayer({
   }, [isMuted]);
   const seekTo = useCallback((time: number) => {
     isRewinding.current = false;
-    providerRef.current?.seekTo(time);
+    const provider = providerRef.current;
+    if (!provider) return;
+
+    const duration = provider.getDuration();
+    const target = Math.max(0, duration ? Math.min(duration, time) : time);
+    provider.seekTo(target);
+    setCurrentTime(target);
+    onTimeUpdateRef.current?.(target);
   }, []);
   const seekBy = useCallback((seconds: number) => {
     const provider = providerRef.current;
@@ -178,6 +190,8 @@ export function useVideoPlayer({
     const target = Math.max(0, Math.min(duration, time + seconds));
     isRewinding.current = false;
     provider.seekTo(target);
+    setCurrentTime(target);
+    onTimeUpdateRef.current?.(target);
   }, []);
   const togglePlay = useCallback(() => {
     if (playerState === 'playing') {
@@ -197,6 +211,8 @@ export function useVideoPlayer({
     const time = provider.getCurrentTime();
     const target = Math.max(0, time - rewindDuration);
     provider.seekTo(target);
+    setCurrentTime(target);
+    onTimeUpdateRef.current?.(target);
   }, [rewindDuration]);
 
   return {

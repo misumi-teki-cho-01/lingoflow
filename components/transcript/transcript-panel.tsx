@@ -25,6 +25,8 @@ interface TranscriptPanelProps {
   segments: TranscriptSegment[];
   activeSegmentIndex: number;
   onSegmentClick: (time: number) => void;
+  onSegmentPlay?: (time: number, isActive: boolean) => void;
+  isPlaying?: boolean;
   source?: TranscriptSource;
   isLoading?: boolean;
   errorMessage?: string;
@@ -54,6 +56,8 @@ export function TranscriptPanel({
   segments,
   activeSegmentIndex,
   onSegmentClick,
+  onSegmentPlay,
+  isPlaying = false,
   source,
   isLoading = false,
   errorMessage,
@@ -240,7 +244,9 @@ export function TranscriptPanel({
                   segment={segment}
                   index={originalIndex}
                   isActive={originalIndex === activeSegmentIndex}
+                  isPlaying={isPlaying}
                   onSeek={onSegmentClick}
+                  onPlay={onSegmentPlay}
                   onClick={wordClickMode ? undefined : onSegmentClick}
                   searchQuery={searchQuery}
                   wordClickMode={wordClickMode}

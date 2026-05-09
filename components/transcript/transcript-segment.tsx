@@ -1,6 +1,6 @@
 import { forwardRef, memo, Fragment } from 'react';
 import { formatTime, stripPunctuation } from '@/lib/utils/format';
-import { Play } from 'lucide-react';
+import { Pause, Play } from 'lucide-react';
 import type { TranscriptSegment, CcSelection, DragState } from '@/types/transcript';
 import type { VocabularyExplanation } from '@/lib/ai/services';
 
@@ -8,8 +8,11 @@ interface TranscriptSegmentProps {
   segment: TranscriptSegment;
   index: number;
   isActive: boolean;
+  isPlaying?: boolean;
   /** Seek the video to a timestamp. Always available (used by the ▶ button). */
   onSeek: (time: number) => void;
+  /** Seek and start playback. When absent, the ▶ button falls back to seeking only. */
+  onPlay?: (time: number, isActive: boolean) => void;
   /**
    * Legacy prop: used when wordClickMode=false to make the entire row seekable
    * (search/default mode). When wordClickMode=true, only the ▶ button seeks.
@@ -260,7 +263,9 @@ export const TranscriptSegmentRow = memo(
       segment,
       index,
       isActive,
+      isPlaying = false,
       onSeek,
+      onPlay,
       onClick,
       searchQuery,
       wordClickMode,
@@ -276,6 +281,8 @@ export const TranscriptSegmentRow = memo(
     },
     ref,
   ) {
+    const showPause = isActive && isPlaying;
+
     return (
       <div
         ref={ref}
@@ -310,18 +317,26 @@ export const TranscriptSegmentRow = memo(
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onSeek(segment.start_time);
+              if (onPlay) {
+                onPlay(segment.start_time, isActive);
+              } else {
+                onSeek(segment.start_time);
+              }
             }}
-            aria-label={`Seek to ${formatTime(segment.start_time)}`}
+            aria-label={`${showPause ? 'Pause' : 'Play'} at ${formatTime(segment.start_time)}`}
             className={`transition-all duration-200 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary ${
               isActive
                 ? 'opacity-100 scale-100'
                 : 'opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100'
             }`}
           >
-            <Play
-              className={`h-3 w-3 ${isActive ? 'fill-primary text-primary' : 'text-muted-foreground'}`}
-            />
+            {showPause ? (
+              <Pause className="h-3 w-3 fill-primary text-primary" />
+            ) : (
+              <Play
+                className={`h-3 w-3 ${isActive ? 'fill-primary text-primary' : 'text-muted-foreground'}`}
+              />
+            )}
           </button>
         </div>
 
