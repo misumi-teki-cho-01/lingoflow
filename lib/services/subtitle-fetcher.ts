@@ -232,8 +232,19 @@ export async function fetchYouTubeSubtitles(
         language: preferredLang,
       };
     }
-  } catch {
-    // Manual subtitles not available, try auto-generated
+  } catch (error) {
+    console.error('[YouTube Subtitles] Preferred-language fetch failed', {
+      videoId,
+      preferredLang,
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            }
+          : String(error),
+    });
   }
 
   // Attempt 2: Fetch any available transcript (auto-generated fallback)
@@ -247,8 +258,19 @@ export async function fetchYouTubeSubtitles(
         language: 'en',
       };
     }
-  } catch {
-    // No subtitles available at all
+  } catch (error) {
+    console.error('[YouTube Subtitles] Fallback transcript fetch failed', {
+      videoId,
+      preferredLang,
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            }
+          : String(error),
+    });
   }
 
   return { segments: [], source: 'none', language: preferredLang };
