@@ -1,6 +1,7 @@
 'use server';
 
-import { getRecentVideos } from '@/lib/db/videos';
+import { revalidatePath } from 'next/cache';
+import { deleteVideoById, getRecentVideos } from '@/lib/db/videos';
 import type { VideoCardData } from '@/components/video/video-card';
 
 /**
@@ -13,4 +14,33 @@ export async function fetchVideosPage(
 ): Promise<VideoCardData[]> {
   const data = await getRecentVideos(limit, offset);
   return data as VideoCardData[];
+}
+
+export interface DeleteVideoResult {
+  ok: boolean;
+  error?: string;
+}
+
+/**
+ * Server Action: delete a dashboard video and its dependent records.
+ */
+export async function deleteVideo(videoId: string): Promise<DeleteVideoResult> {
+  if (!videoId) {
+    return {
+      ok: false,
+      error: 'Missing video id',
+    };
+  }
+
+  try {
+    await deleteVideoById(videoId);
+    revalidatePath('/[locale]/dashboard', 'page');
+    return { ok: true };
+  } catch (error) {
+    console.error('[Videos] Failed to delete video:', error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to delete video',
+    };
+  }
 }

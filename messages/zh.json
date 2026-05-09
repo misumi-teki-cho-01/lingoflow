@@ -69,7 +69,14 @@
     "viewChannels": "按频道",
     "loadMore": "加载更多",
     "loadingMore": "加载中...",
-    "noMoreVideos": "已加载全部视频"
+    "noMoreVideos": "已加载全部视频",
+    "deleteVideo": "删除视频",
+    "deleteConfirmTitle": "删除这个视频？",
+    "deleteConfirmBody": "将从数据库删除「{title}」，包括对应字幕、注释和听写记录。此操作无法撤销。",
+    "deleteCancel": "取消",
+    "deleteConfirm": "删除",
+    "deletingVideo": "删除中...",
+    "deleteFailed": "删除失败，请重试"
   },
   "player": {
     "play": "播放",

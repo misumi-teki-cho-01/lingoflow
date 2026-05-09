@@ -69,7 +69,14 @@
     "viewChannels": "By channel",
     "loadMore": "Load more",
     "loadingMore": "Loading...",
-    "noMoreVideos": "All videos loaded"
+    "noMoreVideos": "All videos loaded",
+    "deleteVideo": "Delete video",
+    "deleteConfirmTitle": "Delete this video?",
+    "deleteConfirmBody": "This will delete \"{title}\" from the database, including its subtitles, annotations, and dictation records. This cannot be undone.",
+    "deleteCancel": "Cancel",
+    "deleteConfirm": "Delete",
+    "deletingVideo": "Deleting...",
+    "deleteFailed": "Failed to delete video. Please try again."
   },
   "player": {
     "play": "Play",

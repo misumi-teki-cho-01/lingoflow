@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { Search, LayoutGrid, List, Play, Tv2, Loader2 } from 'lucide-react';
+import { Search, LayoutGrid, List, Play, Tv2, Loader2, AlertTriangle } from 'lucide-react';
 import { VideoCard, type VideoCardData } from '@/components/video/video-card';
-import { fetchVideosPage } from '@/app/actions/videos';
+import { deleteVideo, fetchVideosPage } from '@/app/actions/videos';
 
 const PAGE_SIZE = 24;
 
@@ -19,6 +19,9 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   const [allVideos, setAllVideos] = useState<VideoCardData[]>(initialVideos);
   const [hasMore, setHasMore] = useState(initialVideos.length >= PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<VideoCardData | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeletePending, startDeleteTransition] = useTransition();
   // Only show the "load more" footer after the user has explicitly requested more.
   // This avoids showing "All videos loaded" to users whose library fits in one page.
   const [hasEverLoadedMore, setHasEverLoadedMore] = useState(false);
@@ -50,6 +53,29 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
     } finally {
       setLoadingMore(false);
     }
+  };
+
+  const handleDeleteRequest = (video: VideoCardData) => {
+    setDeleteError(null);
+    setDeleteTarget(video);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+
+    const target = deleteTarget;
+    startDeleteTransition(async () => {
+      const result = await deleteVideo(target.id);
+
+      if (!result.ok) {
+        setDeleteError(result.error ?? t('deleteFailed'));
+        return;
+      }
+
+      setAllVideos((prev) => prev.filter((video) => video.id !== target.id));
+      setDeleteTarget(null);
+      setDeleteError(null);
+    });
   };
 
   // Derive channel list (sorted by frequency) from all loaded videos
@@ -288,7 +314,12 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
           {!isEmpty && viewMode === 'grid' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredVideos.map((video) => (
-                <VideoCard key={video.video_ext_id} video={video} />
+                <VideoCard
+                  key={video.id}
+                  video={video}
+                  onDelete={handleDeleteRequest}
+                  isDeleting={isDeletePending && deleteTarget?.id === video.id}
+                />
               ))}
             </div>
           )}
@@ -306,8 +337,12 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
                   </h3>
                   <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
                     {channelVideos.map((video) => (
-                      <div key={video.video_ext_id} className="w-[240px] shrink-0">
-                        <VideoCard video={video} />
+                      <div key={video.id} className="w-[240px] shrink-0">
+                        <VideoCard
+                          video={video}
+                          onDelete={handleDeleteRequest}
+                          isDeleting={isDeletePending && deleteTarget?.id === video.id}
+                        />
                       </div>
                     ))}
                   </div>
@@ -340,6 +375,54 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
             </div>
           )}
         </>
+      )}
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-video-title"
+        >
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
+            <div className="flex gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 id="delete-video-title" className="text-base font-semibold text-foreground">
+                  {t('deleteConfirmTitle')}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {t('deleteConfirmBody', {
+                    title: deleteTarget.title ?? deleteTarget.video_ext_id,
+                  })}
+                </p>
+                {deleteError && <p className="mt-3 text-sm text-destructive">{deleteError}</p>}
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeletePending}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+              >
+                {t('deleteCancel')}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeletePending}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-destructive px-3 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
+              >
+                {isDeletePending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isDeletePending ? t('deletingVideo') : t('deleteConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );
