@@ -105,9 +105,9 @@ function toBilibiliSegments(raw: BilibiliSubtitleResponse): TranscriptSegment[] 
 }
 
 const WBI_MIXIN_KEY_ENC_TAB = [
-  46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49, 33, 9, 42, 19,
-  29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4,
-  22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36, 20, 34, 44, 52,
+  46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49, 33, 9, 42, 19, 29, 28,
+  14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54,
+  21, 56, 59, 6, 63, 57, 62, 11, 36, 20, 34, 44, 52,
 ];
 
 let cachedWbiMixinKey: { value: string; expiresAt: number } | null = null;
@@ -137,7 +137,9 @@ async function getWbiMixinKey(videoId: string): Promise<string | null> {
 
   if (rawKey.length === 0) return null;
 
-  const value = WBI_MIXIN_KEY_ENC_TAB.map((index) => rawKey[index]).join('').slice(0, 32);
+  const value = WBI_MIXIN_KEY_ENC_TAB.map((index) => rawKey[index])
+    .join('')
+    .slice(0, 32);
   cachedWbiMixinKey = {
     value,
     expiresAt: Date.now() + 60 * 60 * 1000,
@@ -168,7 +170,10 @@ async function fetchBilibiliWbiPlayerInfo(
         return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
       })
       .join('&');
-    const wRid = crypto.createHash('md5').update(query + mixinKey).digest('hex');
+    const wRid = crypto
+      .createHash('md5')
+      .update(query + mixinKey)
+      .digest('hex');
 
     const res = await fetch(`https://api.bilibili.com/x/player/wbi/v2?${query}&w_rid=${wRid}`, {
       headers: getBilibiliFetchHeaders(videoId),

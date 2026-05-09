@@ -97,10 +97,7 @@ export async function fetchBilibiliMeta(videoId: string): Promise<VideoMeta> {
   };
 }
 
-export async function fetchVideoMeta(
-  source: VideoSourceType,
-  videoId: string,
-): Promise<VideoMeta> {
+export async function fetchVideoMeta(source: VideoSourceType, videoId: string): Promise<VideoMeta> {
   if (source === 'bilibili') {
     return fetchBilibiliMeta(videoId);
   }

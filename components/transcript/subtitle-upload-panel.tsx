@@ -73,7 +73,11 @@ export function SubtitleUploadPanel({ videoId, onUploaded }: SubtitleUploadPanel
         disabled={isUploading}
         onClick={() => inputRef.current?.click()}
       >
-        {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+        {isUploading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Upload className="h-4 w-4" />
+        )}
         {isUploading ? t('uploading') : t('uploadButton')}
       </Button>
 
