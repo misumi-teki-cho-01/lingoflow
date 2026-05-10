@@ -31,6 +31,13 @@ export function normalizeWord(raw: string): string {
   return raw.replace(/^[.,!?;:'"()[\]{}<>]+|[.,!?;:'"()[\]{}<>]+$/g, '').toLowerCase();
 }
 
+export const DASH_SEPARATOR_REGEX = /[-—]/;
+export const DASH_SEPARATOR_CAPTURE_REGEX = /([-—])/;
+
+export function hasDashSeparator(raw: string): boolean {
+  return DASH_SEPARATOR_REGEX.test(raw);
+}
+
 /**
  * Strip leading/trailing punctuation from a token while preserving original casing.
  * Used when building display text for CC selections.

@@ -1,5 +1,11 @@
 import { forwardRef, memo, Fragment } from 'react';
-import { formatTime, stripPunctuation } from '@/lib/utils/format';
+import {
+  DASH_SEPARATOR_CAPTURE_REGEX,
+  DASH_SEPARATOR_REGEX,
+  formatTime,
+  hasDashSeparator,
+  stripPunctuation,
+} from '@/lib/utils/format';
 import { Pause, Play } from 'lucide-react';
 import type { TranscriptSegment, CcSelection, DragState } from '@/types/transcript';
 import type { VocabularyExplanation } from '@/lib/ai/services';
@@ -71,27 +77,29 @@ function HighlightedText({ text, query }: { text: string; query?: string }) {
  * and `handleDragEnd` cycles the selection state on each tap.
  */
 function renderHyphenatedToken(token: string, selectedText: string): React.ReactNode {
-  const parts = token.split('-');
+  const parts = token.split(DASH_SEPARATOR_CAPTURE_REGEX);
   const selectedParts = new Set(
-    selectedText.split('-').map((p) => stripPunctuation(p).toLowerCase()),
+    selectedText.split(DASH_SEPARATOR_REGEX).map((p) => stripPunctuation(p).toLowerCase()),
   );
   return (
     <>
       {parts.map((part, pi) => {
+        if (DASH_SEPARATOR_REGEX.test(part)) {
+          return <Fragment key={pi}>{part}</Fragment>;
+        }
+
         const inSel = selectedParts.has(stripPunctuation(part).toLowerCase());
         return (
-          <Fragment key={pi}>
-            <span
-              className={
-                inSel
-                  ? 'bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100 rounded px-0.5'
-                  : 'opacity-40'
-              }
-            >
-              {part}
-            </span>
-            {pi < parts.length - 1 && '-'}
-          </Fragment>
+          <span
+            key={pi}
+            className={
+              inSel
+                ? 'bg-indigo-200 dark:bg-indigo-500/40 text-indigo-900 dark:text-indigo-100 rounded px-0.5'
+                : 'opacity-40'
+            }
+          >
+            {part}
+          </span>
         );
       })}
     </>
@@ -189,7 +197,7 @@ function WordClickableText({
         const selectedText = selectedTextMap?.get(posKey);
         const isPartiallySelected =
           isSelected &&
-          token.includes('-') &&
+          hasDashSeparator(token) &&
           selectedText !== undefined &&
           selectedText.toLowerCase() !== stripPunctuation(token).toLowerCase();
 

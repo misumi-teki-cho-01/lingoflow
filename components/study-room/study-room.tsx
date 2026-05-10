@@ -14,7 +14,7 @@ import { VocabularyReviewModal } from './vocabulary-review-modal';
 import { SubtitleEnhanceModal } from './subtitle-enhance-modal';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
-import { stripPunctuation } from '@/lib/utils/format';
+import { DASH_SEPARATOR_REGEX, stripPunctuation } from '@/lib/utils/format';
 import {
   convertToMarkdown,
   convertTranscriptToMarkdown,
@@ -368,7 +368,7 @@ export function StudyRoom({
         if (overlaps.length === 1 && minIdx === maxIdx) {
           const sel = overlaps[0];
           const originalToken = stripPunctuation(nonWhitespaceTokens[minIdx]);
-          const parts = originalToken.split('-');
+          const parts = originalToken.split(DASH_SEPARATOR_REGEX);
           if (parts.length === 2) {
             const [first, second] = parts;
             const cur = sel.text.toLowerCase();
