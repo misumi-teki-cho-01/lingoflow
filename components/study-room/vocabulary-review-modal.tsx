@@ -26,6 +26,7 @@ type Notice = {
   tone: 'success' | 'error' | 'info';
   text: string;
 } | null;
+type PromptBuilder = (context: string, words: string[], locale: string) => string;
 
 const PROMPT_LANGUAGE_KEY = 'lingo-prompt-language';
 
@@ -54,6 +55,7 @@ export interface VocabularyReviewModalProps {
    * a new explanation).
    */
   existingDefinitions?: Record<string, VocabularyExplanation>;
+  promptBuilder?: PromptBuilder;
 }
 
 interface RowState {
@@ -155,6 +157,7 @@ export function VocabularyReviewModal({
   showPersistOption = false,
   onFeedback,
   existingDefinitions = {},
+  promptBuilder,
 }: VocabularyReviewModalProps) {
   const t = useTranslations('studyRoom');
   const locale = useLocale();
@@ -191,6 +194,20 @@ export function VocabularyReviewModal({
   useEffect(() => {
     if (!visible) return;
 
+    const savedLanguage =
+      typeof window !== 'undefined' ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
+    const nextPromptLanguage = savedLanguage || locale;
+    const initialRows = initialWords.map((w) => {
+      const key = w.text.trim().toLowerCase();
+      const existing = existingDefinitions[key] ?? existingDefinitions[w.text.trim()];
+      return {
+        id: w.id,
+        original_text: w.text.trim(),
+        canonical_form: existing?.canonical_form ?? '',
+        explanation: existing?.explanation ?? '',
+      };
+    });
+
     setStep(initialStep);
     setPastedJson('');
     setIsSaving(false);
@@ -199,21 +216,34 @@ export function VocabularyReviewModal({
     setEditablePrompt('');
     setPromptCopied(false);
     fetchedContextRef.current = '';
-    setRows(
-      initialWords.map((w) => {
-        const key = w.text.trim().toLowerCase();
-        const existing = existingDefinitions[key] ?? existingDefinitions[w.text.trim()];
-        return {
-          id: w.id,
-          original_text: w.text.trim(),
-          canonical_form: existing?.canonical_form ?? '',
-          explanation: existing?.explanation ?? '',
-        };
-      }),
-    );
-    // Read persisted language preference
-    const saved = typeof window !== 'undefined' ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
-    setPromptLanguage(saved || locale);
+    setRows(initialRows);
+    setPromptLanguage(nextPromptLanguage);
+
+    if (initialStep === 'prompt_editor') {
+      setIsLoadingPrompt(true);
+      getContextText()
+        .then((ctx) => {
+          fetchedContextRef.current = ctx;
+          const uniqueInitialWords = Array.from(
+            new Set(initialRows.map((row) => row.original_text).filter(Boolean)),
+          );
+          const newInitialWords = uniqueInitialWords.filter((word) => {
+            const key = word.toLowerCase();
+            return !existingDefinitions[key] && !existingDefinitions[word];
+          });
+          const wordsForAI = newInitialWords.length > 0 ? newInitialWords : uniqueInitialWords;
+
+          setEditablePrompt(
+            promptBuilder
+              ? promptBuilder(ctx, wordsForAI, nextPromptLanguage)
+              : getExplainDictationPrompt(nextPromptLanguage)
+                  .replace('{{text}}', ctx)
+                  .replace('{{words}}', JSON.stringify(wordsForAI, null, 2)),
+          );
+        })
+        .catch(() => updateNotice({ tone: 'error', text: t('copyPromptFailed') }))
+        .finally(() => setIsLoadingPrompt(false));
+    }
     // existingDefinitions intentionally omitted — we only want to re-init when the
     // modal opens (visible) or the word list changes, not on every definition update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,10 +276,11 @@ export function VocabularyReviewModal({
   };
 
   const buildPrompt = (context: string, lang: string) => {
-    const template = getExplainDictationPrompt(lang);
     // Only include words that don't already have a saved definition
     const wordsForAI = newWordsForPrompt.length > 0 ? newWordsForPrompt : uniqueWords;
-    return template
+    if (promptBuilder) return promptBuilder(context, wordsForAI, lang);
+
+    return getExplainDictationPrompt(lang)
       .replace('{{text}}', context)
       .replace('{{words}}', JSON.stringify(wordsForAI, null, 2));
   };

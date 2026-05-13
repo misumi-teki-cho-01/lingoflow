@@ -147,6 +147,86 @@ ${STRICT_FORMAT_NOTE_EN}
 `;
 }
 
+export function getInstantLookupPrompt(
+  context: string,
+  words: string[],
+  locale: string = 'zh',
+): string {
+  const isChinese = locale.startsWith('zh');
+  const isJapanese = locale.startsWith('ja');
+  const targetLanguage = LANGUAGE_MAP[locale] || LANGUAGE_MAP['zh'];
+  const targetWords = words.length > 0 ? words : [''];
+  const formatExample = JSON.stringify(
+    Object.fromEntries(
+      targetWords.map((word) => [
+        word,
+        {
+          original_text: word,
+          canonical_form: isJapanese
+            ? 'この単語またはフレーズの原形'
+            : isChinese
+              ? '该词语或词组的原形'
+              : 'lemma or canonical form of the word or phrase',
+          explanation: isJapanese
+            ? 'この文脈に基づく簡潔な解説'
+            : isChinese
+              ? '基于这句话的简明释义'
+              : 'concise explanation based on this sentence',
+        },
+      ]),
+    ),
+    null,
+    2,
+  );
+  const wordList = JSON.stringify(targetWords, null, 2);
+
+  if (isChinese) {
+    return `你是一位语言学习助手。
+请解释下面句子里用 **粗体** 标出的词语或词组是什么意思。只解释它们在对应句子中的具体含义。
+
+句子：
+${context}
+
+目标词语：
+${wordList}
+
+请使用 ${targetLanguage} 输出解释，并严格返回纯 JSON，不要使用 Markdown 代码块，也不要添加 JSON 之外的文字。
+
+返回格式：
+${formatExample}`;
+  }
+
+  if (isJapanese) {
+    return `あなたは言語学習アシスタントです。
+次の文で **太字** になっている単語またはフレーズの意味を説明してください。それぞれ該当する文の中での具体的な意味だけを説明してください。
+
+文：
+${context}
+
+対象語：
+${wordList}
+
+解説は必ず ${targetLanguage} で書いてください。Markdown のコードブロックを使わず、JSON 以外の文字を追加せず、純粋な JSON だけを返してください。
+
+戻り値の形式：
+${formatExample}`;
+  }
+
+  return `You are a language learning assistant.
+Explain what each **bolded** word or phrase means in the sentences below. Only explain its specific meaning in the corresponding sentence.
+
+Sentences:
+${context}
+
+Target words:
+${wordList}
+
+Write the explanation in ${targetLanguage}. Return ONLY raw JSON. Do not use a Markdown code block and do not include any text outside the JSON.
+
+Return format:
+${formatExample}`;
+}
+
 export function getEnhancementPrompt(locale: string = 'zh'): string {
   const isChinese = locale.startsWith('zh');
   const isJapanese = locale.startsWith('ja');

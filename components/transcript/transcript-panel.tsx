@@ -50,6 +50,8 @@ interface TranscriptPanelProps {
   onDragEnd?: () => void;
   onExplainWords?: () => void;
   onClearWords?: () => void;
+  suppressInstantLookup?: boolean;
+  onSuppressInstantLookupChange?: (checked: boolean) => void;
 }
 
 export function TranscriptPanel({
@@ -73,6 +75,8 @@ export function TranscriptPanel({
   onDragEnd,
   onExplainWords,
   onClearWords,
+  suppressInstantLookup = false,
+  onSuppressInstantLookupChange,
 }: TranscriptPanelProps) {
   const t = useTranslations('transcript');
   const tCommon = useTranslations('common');
@@ -280,8 +284,17 @@ export function TranscriptPanel({
               }`}
             >
               {wordClickMode && (
-                <div className="min-w-0 flex-1 self-center">
+                <div className="min-w-0 flex-1 self-center space-y-1.5">
                   <p className="text-xs leading-none text-muted-foreground">{t('wordClickHint')}</p>
+                  <label className="inline-flex items-center gap-2 text-[11px] leading-none text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={suppressInstantLookup}
+                      onChange={(e) => onSuppressInstantLookupChange?.(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border border-input"
+                    />
+                    <span>{t('suppressInstantLookup')}</span>
+                  </label>
                 </div>
               )}
 

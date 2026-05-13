@@ -23,6 +23,7 @@ import {
   type ExportMetadata,
 } from '@/lib/utils/markdown';
 import { saveEnhancedTranscript } from '@/lib/api/transcripts';
+import { getInstantLookupPrompt } from '@/lib/ai/prompts';
 import type { TranscriptSegment, CcSelection, DragState } from '@/types/transcript';
 import type { TranscriptSource } from '@/lib/pipeline/transcription-pipeline';
 import type { VideoMeta } from '@/lib/utils/video-meta';
@@ -39,6 +40,7 @@ import {
   CheckCircle2,
   TriangleAlert,
   Wand2,
+  X,
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -62,11 +64,69 @@ type FeedbackState = {
   text: string;
 } | null;
 
+const INSTANT_LOOKUP_STORAGE_KEY = 'cc-instant-lookup-disabled';
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 function pushModeToUrl(mode: StudyMode) {
   const url = new URL(window.location.href);
   url.searchParams.set('mode', mode);
   window.history.replaceState({}, '', url.toString());
+}
+
+function buildSelectionContext(segments: TranscriptSegment[], selections: CcSelection[]) {
+  const selectionsBySegment = new Map<number, CcSelection[]>();
+  selections.forEach((selection) => {
+    const group = selectionsBySegment.get(selection.segmentIndex) ?? [];
+    group.push(selection);
+    selectionsBySegment.set(selection.segmentIndex, group);
+  });
+
+  const markSelectedWords = (text: string, segmentSelections: CcSelection[]) => {
+    const tokens = text.split(/(\s+)/);
+    let wordIdx = 0;
+    let marked = '';
+    let isInsideSelection = false;
+
+    tokens.forEach((token) => {
+      if (/^\s+$/.test(token)) {
+        marked += token;
+        return;
+      }
+
+      const selected = segmentSelections.some(
+        (selection) => wordIdx >= selection.startWordIndex && wordIdx <= selection.endWordIndex,
+      );
+      if (selected && !isInsideSelection) {
+        marked += '**';
+        isInsideSelection = true;
+      }
+      if (!selected && isInsideSelection) {
+        marked += '**';
+        isInsideSelection = false;
+      }
+
+      marked += token;
+      wordIdx += 1;
+    });
+
+    if (isInsideSelection) marked += '**';
+    return marked;
+  };
+
+  return Array.from(selectionsBySegment.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([segmentIndex, segmentSelections]) => {
+      const segment = segments[segmentIndex];
+      if (!segment) return '';
+
+      const sortedSelections = [...segmentSelections].sort(
+        (a, b) => a.startWordIndex - b.startWordIndex,
+      );
+      return markSelectedWords(segment.text, sortedSelections);
+    })
+    .filter(Boolean)
+    .map((sentence, index) => `${index + 1}. ${sentence}`)
+    .join('\n');
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -110,6 +170,26 @@ export function StudyRoom({
   const [persistedCcSelections, setPersistedCcSelections] =
     useState<CcSelection[]>(initialCcSelections);
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const [suppressInstantLookup, setSuppressInstantLookup] = useState(false);
+  const [pendingInstantSelection, setPendingInstantSelection] = useState<CcSelection | null>(null);
+  const [instantReviewSelections, setInstantReviewSelections] = useState<CcSelection[]>([]);
+
+  useEffect(() => {
+    try {
+      setSuppressInstantLookup(localStorage.getItem(INSTANT_LOOKUP_STORAGE_KEY) === 'true');
+    } catch {
+      /* ignore storage access issues */
+    }
+  }, []);
+
+  const handleSuppressInstantLookupChange = useCallback((checked: boolean) => {
+    setSuppressInstantLookup(checked);
+    try {
+      localStorage.setItem(INSTANT_LOOKUP_STORAGE_KEY, String(checked));
+    } catch {
+      /* ignore storage access issues */
+    }
+  }, []);
 
   // Derived: set of "segIdx-wordIdx" keys for fast per-instance highlight lookup
   const draftSelectedPositionKeys = useMemo(() => {
@@ -356,17 +436,29 @@ export function StudyRoom({
     // Clear drag state first so double-fire is a no-op
     setDragState(null);
 
+    const overlaps = ccSelections.filter(
+      (s) =>
+        s.segmentIndex === segmentIndex && s.startWordIndex <= maxIdx && s.endWordIndex >= minIdx,
+    );
+    const nextSelection: CcSelection = {
+      id,
+      segmentIndex,
+      startWordIndex: minIdx,
+      endWordIndex: maxIdx,
+      text: phrase,
+    };
+
     setCcSelections((prevSels) => {
-      const overlaps = prevSels.filter(
+      const currentOverlaps = prevSels.filter(
         (s) =>
           s.segmentIndex === segmentIndex && s.startWordIndex <= maxIdx && s.endWordIndex >= minIdx,
       );
       // Allow deselecting (removing) even if the word has a definition
-      if (overlaps.length > 0) {
+      if (currentOverlaps.length > 0) {
         // For a single-word selection on a 2-part hyphenated token, cycle
         // through {both} → {second} → {first} → {none} instead of removing.
-        if (overlaps.length === 1 && minIdx === maxIdx) {
-          const sel = overlaps[0];
+        if (currentOverlaps.length === 1 && minIdx === maxIdx) {
+          const sel = currentOverlaps[0];
           const originalToken = stripPunctuation(nonWhitespaceTokens[minIdx]);
           const parts = originalToken.split(DASH_SEPARATOR_REGEX);
           if (parts.length === 2) {
@@ -382,25 +474,33 @@ export function StudyRoom({
             return prevSels.map((s) => (s === sel ? { ...s, text: next as string } : s));
           }
         }
-        return prevSels.filter((s) => !overlaps.includes(s));
+        return prevSels.filter((s) => !currentOverlaps.includes(s));
       }
-      return [
-        ...prevSels,
-        {
-          id,
-          segmentIndex,
-          startWordIndex: minIdx,
-          endWordIndex: maxIdx,
-          text: phrase,
-        },
-      ];
+      return [...prevSels, nextSelection];
     });
-  }, [dragState, liveSegments]);
+
+    if (overlaps.length === 0 && phrase && !suppressInstantLookup) {
+      setPendingInstantSelection(nextSelection);
+    }
+  }, [ccSelections, dragState, liveSegments, suppressInstantLookup]);
 
   const handleCCWordsClear = useCallback(() => {
     setCcSelections([]);
+    setPendingInstantSelection(null);
     localStorage.removeItem(`cc-selections-${videoId}`);
   }, [videoId]);
+
+  const removeCcSelection = useCallback((selection: CcSelection) => {
+    setCcSelections((prev) => prev.filter((sel) => sel.id !== selection.id));
+    setPendingInstantSelection((prev) => (prev?.id === selection.id ? null : prev));
+  }, []);
+
+  const getUnexplainedCcSelections = useCallback(() => {
+    return ccSelections.filter((sel) => {
+      const key = sel.text.trim().toLowerCase();
+      return definitions[key] === undefined && definitions[sel.text.trim()] === undefined;
+    });
+  }, [ccSelections, definitions]);
 
   // ── Vocabulary review — Scribe ────────────────────────────────────────────
   const openScribeVocabularyReview = () => {
@@ -486,6 +586,66 @@ export function StudyRoom({
     showFeedback({ tone: 'success', text: t('saveSuccess') });
     closeReview();
   };
+
+  const handleSaveInstantCCVocabulary = async (
+    finalData: Record<string, VocabularyExplanation>,
+    transforms: { id: string; newText: string }[],
+    options: { persistReviewedTranscript: boolean },
+  ) => {
+    void options;
+    if (instantReviewSelections.length === 0) return;
+
+    const finalDataByText = new Map<string, VocabularyExplanation>();
+    Object.values(finalData).forEach((def) => {
+      finalDataByText.set(def.original_text.trim(), def);
+      finalDataByText.set(def.original_text.trim().toLowerCase(), def);
+    });
+
+    const savedSelections = instantReviewSelections
+      .map((selection) => {
+        const transformed = transforms.find((tr) => tr.id === selection.id);
+        const transformedText = transformed?.newText ?? selection.text;
+        const def =
+          finalDataByText.get(transformedText.trim()) ??
+          finalDataByText.get(transformedText.trim().toLowerCase());
+        if (!def) return null;
+
+        return {
+          ...selection,
+          text: def.original_text,
+        };
+      })
+      .filter((selection): selection is CcSelection => selection !== null);
+
+    if (savedSelections.length === 0) return;
+
+    const { saveVocabularyToDB } = await import('@/lib/api/ai');
+    await saveVocabularyToDB(videoId, finalData, {
+      sourceMode: 'cc',
+      ccSelections: savedSelections,
+    });
+
+    setDefinitions((prev) => ({ ...prev, ...finalData }));
+    setPersistedCcSelections((prev) => {
+      const merged = new Map<string, CcSelection>();
+      [...prev, ...savedSelections].forEach((sel) => merged.set(sel.id, sel));
+      return Array.from(merged.values());
+    });
+    const savedIds = new Set(savedSelections.map((sel) => sel.id));
+    setCcSelections((prev) => prev.filter((sel) => !savedIds.has(sel.id)));
+    setInstantReviewSelections([]);
+    showFeedback({ tone: 'success', text: t('saveSuccess') });
+  };
+
+  const instantReviewWords = useMemo(
+    () => instantReviewSelections.map((sel) => ({ id: sel.id, text: sel.text })),
+    [instantReviewSelections],
+  );
+
+  const getInstantContextText = useCallback(
+    () => Promise.resolve(buildSelectionContext(liveSegments, instantReviewSelections)),
+    [instantReviewSelections, liveSegments],
+  );
 
   // ── Save enhanced subtitles ───────────────────────────────────────────────
   const handleSaveEnhancedTranscript = async (enhanced: TranscriptSegment[]) => {
@@ -774,6 +934,8 @@ export function StudyRoom({
               onDragEnd={handleDragEnd}
               onClearWords={handleCCWordsClear}
               onExplainWords={openCCVocabularyReview}
+              suppressInstantLookup={suppressInstantLookup}
+              onSuppressInstantLookupChange={handleSuppressInstantLookupChange}
             />
           ) : (
             <FillPanel
@@ -808,6 +970,65 @@ export function StudyRoom({
         onFeedback={showFeedback}
         existingDefinitions={mode !== 'scribe' ? definitions : undefined}
       />
+
+      {instantReviewSelections.length > 0 && (
+        <VocabularyReviewModal
+          visible
+          initialWords={instantReviewWords}
+          initialStep="prompt_editor"
+          onCancel={() => setInstantReviewSelections([])}
+          onSave={handleSaveInstantCCVocabulary}
+          getContextText={getInstantContextText}
+          promptBuilder={getInstantLookupPrompt}
+          showPersistOption={false}
+          onFeedback={showFeedback}
+          existingDefinitions={definitions}
+        />
+      )}
+
+      {pendingInstantSelection && instantReviewSelections.length === 0 && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-4 shadow-lg animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">{t('instantLookupTitle')}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t('instantLookupDesc', { word: pendingInstantSelection.text })}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => setPendingInstantSelection(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => removeCcSelection(pendingInstantSelection)}>
+                {t('cancelAnnotation')}
+              </Button>
+              <Button
+                onClick={() => {
+                  const unexplainedSelections = getUnexplainedCcSelections();
+                  setInstantReviewSelections(
+                    unexplainedSelections.length > 0
+                      ? unexplainedSelections
+                      : [pendingInstantSelection],
+                  );
+                  setPendingInstantSelection(null);
+                }}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                {t('lookupThisWord')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Subtitle Enhancement Modal ── */}
       <SubtitleEnhanceModal
