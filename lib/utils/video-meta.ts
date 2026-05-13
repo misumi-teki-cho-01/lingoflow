@@ -102,6 +102,14 @@ export async function fetchVideoMeta(source: VideoSourceType, videoId: string): 
     return fetchBilibiliMeta(videoId);
   }
 
+  if (source === 'local') {
+    return {
+      title: videoId,
+      channelName: 'Local file',
+      thumbnailUrl: '',
+    };
+  }
+
   const meta = await fetchYouTubeMeta(videoId);
   return {
     title: meta.title,

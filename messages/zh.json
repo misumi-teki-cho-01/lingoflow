@@ -48,6 +48,15 @@
   "dashboard": {
     "importVideo": "导入视频",
     "urlPlaceholder": "粘贴 YouTube 或 Bilibili 链接...",
+    "urlImportTab": "在线链接",
+    "localImportTab": "本地视频",
+    "chooseLocalVideo": "选择视频文件",
+    "chooseLocalSubtitle": "选择字幕文件（可选）",
+    "localImportHint": "支持 .mp4 和 .webm；字幕可导入 .srt 或 .vtt，也可以进入视频页后再上传。",
+    "localVideoRequired": "请先选择一个本地视频文件",
+    "localVideoUnsupported": "目前只支持 .mp4 或 .webm 视频文件。",
+    "localSubtitleUnsupported": "目前只支持 .srt 或 .vtt 字幕文件。",
+    "localSubtitleParseFailed": "没有解析到有效字幕，请检查时间轴格式。",
     "recentImports": "共享视频库",
     "noVideos": "还没有导入任何视频",
     "noVideosHint": "粘贴链接，把第一个视频加入共享视频库",
@@ -60,7 +69,8 @@
     "allSources": "全部来源",
     "source": {
       "youtube": "YouTube",
-      "bilibili": "Bilibili"
+      "bilibili": "Bilibili",
+      "local": "本地"
     },
     "allChannels": "全部频道",
     "channelGroup": "{name} · {count} 个视频",

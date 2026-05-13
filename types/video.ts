@@ -1,4 +1,4 @@
-export type VideoSourceType = 'youtube' | 'bilibili';
+export type VideoSourceType = 'youtube' | 'bilibili' | 'local';
 
 export interface VideoSource {
   type: VideoSourceType;

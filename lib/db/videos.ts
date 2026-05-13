@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
+import type { VideoSourceType } from '@/types/video';
 
 export interface VideoInsertData {
   url: string;
-  source_type: 'youtube' | 'bilibili';
+  source_type: VideoSourceType;
   video_ext_id: string;
   title: string | null;
   channel_name: string | null;

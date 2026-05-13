@@ -1,6 +1,7 @@
 import type { VideoSourceType, VideoProvider } from '@/types/video';
 import { YouTubeProvider } from './youtube-provider';
 import { BilibiliProvider } from './bilibili-provider';
+import { LocalVideoProvider } from './local-provider';
 
 export function createVideoProvider(source: VideoSourceType): VideoProvider {
   switch (source) {
@@ -8,6 +9,8 @@ export function createVideoProvider(source: VideoSourceType): VideoProvider {
       return new YouTubeProvider();
     case 'bilibili':
       return new BilibiliProvider();
+    case 'local':
+      return new LocalVideoProvider();
     default:
       throw new Error(`Unsupported video source: ${source}`);
   }
@@ -34,6 +37,12 @@ export function detectVideoSource(
   const biliMatch = url.match(biliPattern);
   if (biliMatch) {
     return { source: 'bilibili', videoId: biliMatch[1] };
+  }
+
+  const localPattern = /^local:\/\/(local-[a-f0-9-]+)$/i;
+  const localMatch = url.match(localPattern);
+  if (localMatch) {
+    return { source: 'local', videoId: localMatch[1] };
   }
 
   return null;

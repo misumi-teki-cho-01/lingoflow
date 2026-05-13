@@ -15,6 +15,7 @@ import type { VideoSourceType } from '@/types/video';
 
 const YT_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 const BILI_BV_RE = /^BV[a-zA-Z0-9]+$/;
+const LOCAL_ID_RE = /^local-[a-f0-9-]+$/i;
 
 // ── DB lookup ──────────────────────────────────────────────────────────────
 interface DBVideo {
@@ -110,7 +111,9 @@ export default async function VideoPage({
     ? 'youtube'
     : BILI_BV_RE.test(id)
       ? 'bilibili'
-      : null;
+      : LOCAL_ID_RE.test(id)
+        ? 'local'
+        : null;
 
   if (!inferredSource) notFound();
 
@@ -143,6 +146,10 @@ export default async function VideoPage({
     segments = dbTranscript?.segments ?? [];
     transcriptSource = dbTranscript?.quality ?? 'failed';
   } else {
+    if (sourceType === 'local') {
+      notFound();
+    }
+
     // Fallback: video accessed directly (not via import flow)
     const [meta, result] = await Promise.all([
       fetchVideoMeta(sourceType, id),

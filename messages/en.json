@@ -48,6 +48,15 @@
   "dashboard": {
     "importVideo": "Import Video",
     "urlPlaceholder": "Paste a YouTube or Bilibili link...",
+    "urlImportTab": "Online link",
+    "localImportTab": "Local video",
+    "chooseLocalVideo": "Choose video file",
+    "chooseLocalSubtitle": "Choose subtitles (optional)",
+    "localImportHint": "Supports .mp4 and .webm. Subtitles can be .srt or .vtt, or uploaded later from the video page.",
+    "localVideoRequired": "Choose a local video file first.",
+    "localVideoUnsupported": "Only .mp4 and .webm video files are supported for now.",
+    "localSubtitleUnsupported": "Only .srt and .vtt subtitle files are supported for now.",
+    "localSubtitleParseFailed": "No valid subtitle cues were found. Check the timestamp format.",
     "recentImports": "Shared Library",
     "noVideos": "No videos imported yet",
     "noVideosHint": "Paste a link to add the first video to the shared library",
@@ -60,7 +69,8 @@
     "allSources": "All sources",
     "source": {
       "youtube": "YouTube",
-      "bilibili": "Bilibili"
+      "bilibili": "Bilibili",
+      "local": "Local"
     },
     "allChannels": "All channels",
     "channelGroup": "{name} · {count} videos",

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Search, LayoutGrid, List, Play, Tv2, Loader2, AlertTriangle } from 'lucide-react';
 import { VideoCard, type VideoCardData } from '@/components/video/video-card';
 import { deleteVideo, fetchVideosPage } from '@/app/actions/videos';
+import { deleteLocalVideo } from '@/lib/utils/local-media-store';
 
 const PAGE_SIZE = 24;
 
@@ -72,6 +73,9 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
         return;
       }
 
+      if (target.source_type === 'local') {
+        await deleteLocalVideo(target.video_ext_id).catch(() => undefined);
+      }
       setAllVideos((prev) => prev.filter((video) => video.id !== target.id));
       setDeleteTarget(null);
       setDeleteError(null);

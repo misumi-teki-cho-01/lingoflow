@@ -87,6 +87,7 @@ export function useVideoPlayer({
     provider.on('ready', () => {
       setIsReady(true);
       setDuration(provider.getDuration());
+      setIsMuted(provider.getVolume() === 0);
     });
 
     provider.on('timeUpdate', (time) => {
