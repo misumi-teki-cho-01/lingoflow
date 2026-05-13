@@ -46,7 +46,8 @@ export class LocalVideoProvider implements VideoProvider {
     video.playsInline = true;
     video.controls = false;
     this.applyVolume(video);
-    video.style.cssText = 'width:100%;height:100%;display:block;background:#000;object-fit:contain;';
+    video.style.cssText =
+      'width:100%;height:100%;display:block;background:#000;object-fit:contain;';
 
     this.video = video;
     container.appendChild(video);
@@ -134,7 +135,10 @@ export class LocalVideoProvider implements VideoProvider {
 
   seekTo(timeSeconds: number): void {
     if (!this.video) return;
-    this.video.currentTime = Math.max(0, Math.min(this.getDuration() || Number.MAX_SAFE_INTEGER, timeSeconds));
+    this.video.currentTime = Math.max(
+      0,
+      Math.min(this.getDuration() || Number.MAX_SAFE_INTEGER, timeSeconds),
+    );
     this.emitter.emit('timeUpdate', this.video.currentTime);
   }
 

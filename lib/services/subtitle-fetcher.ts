@@ -195,7 +195,8 @@ async function inspectYouTubeTranscriptResponse(
 
 function createYouTubeDiagnosticFetch(diagnostics: YouTubeTranscriptDiagnostics): typeof fetch {
   return async (input, init) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const url =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     const phase = getYouTubeFetchPhase(url);
 
     try {

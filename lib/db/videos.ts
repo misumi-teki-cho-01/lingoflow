@@ -38,7 +38,9 @@ export async function getRecentVideos(limit: number = 24, offset: number = 0) {
     const supabase = await createClient();
     const { data } = await supabase
       .from('videos')
-      .select('id, video_ext_id, title, channel_name, thumbnail_url, duration, source_type, created_at')
+      .select(
+        'id, video_ext_id, title, channel_name, thumbnail_url, duration, source_type, created_at',
+      )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     return data || [];
