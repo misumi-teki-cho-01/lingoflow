@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import { LocaleSwitcher } from './locale-switcher';
 import { LogoutButton } from './logout-button';
+import { ThemeSwitcher } from './theme-switcher';
 
 export function Header() {
   return (
@@ -11,17 +12,27 @@ export function Header() {
           href="/dashboard"
           className="flex shrink-0 items-center gap-2.5 text-foreground transition-opacity hover:opacity-80"
         >
-          <Image
-            src="/logo/lingoflow-black-line.png"
-            alt="LingoFlow logo"
-            width={28}
-            height={28}
-            className="h-7 w-7 object-contain"
-          />
+          <span className="relative h-7 w-7 shrink-0">
+            <Image
+              src="/logo/lingoflow-black-line.png"
+              alt="LingoFlow logo"
+              width={28}
+              height={28}
+              className="h-7 w-7 object-contain dark:hidden"
+            />
+            <Image
+              src="/logo/lingflow-white-line.png"
+              alt="LingoFlow logo"
+              width={28}
+              height={28}
+              className="hidden h-7 w-7 object-contain dark:block"
+            />
+          </span>
           <span className="text-base font-semibold tracking-tight sm:text-lg">LingoFlow</span>
         </Link>
 
         <nav className="ml-auto flex items-center gap-1">
+          <ThemeSwitcher />
           <LocaleSwitcher />
           <LogoutButton />
         </nav>

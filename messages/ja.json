@@ -93,6 +93,12 @@
     "pause": "一時停止",
     "speed": "再生速度"
   },
+  "theme": {
+    "label": "テーマ",
+    "system": "システム",
+    "light": "ライト",
+    "dark": "ダーク"
+  },
   "shadow": {
     "modeLabel": "シャドーモード",
     "rewindButton": "巻き戻し",
@@ -103,6 +109,8 @@
   "studyRoom": {
     "echoScribeMode": "Echo Scribe",
     "ccMode": "CC字幕",
+    "studyMode": "学習室",
+    "cinemaMode": "字幕シアター",
     "exportMd": "MDエクスポート",
     "back": "戻る",
     "showCC": "字幕を表示",

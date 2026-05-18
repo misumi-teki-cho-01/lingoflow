@@ -33,6 +33,7 @@ import {
   Headphones,
   Captions,
   PenLine,
+  Clapperboard,
   Download,
   Eye,
   EyeOff,
@@ -736,6 +737,13 @@ export function StudyRoom({
             <PenLine className="h-3.5 w-3.5" />
             {t('fillMode')}
           </button>
+          <Link
+            href={`/video/${videoId}/cinema`}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1 font-medium text-muted-foreground transition-all hover:text-foreground"
+          >
+            <Clapperboard className="h-3.5 w-3.5" />
+            {t('cinemaMode')}
+          </Link>
         </div>
 
         {/* Action buttons */}
@@ -807,10 +815,10 @@ export function StudyRoom({
           <div
             className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${
               feedback.tone === 'success'
-                ? 'border-emerald-300/70 bg-emerald-50 text-emerald-700'
+                ? 'border-emerald-300/70 bg-emerald-50 text-emerald-700 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-200'
                 : feedback.tone === 'error'
-                  ? 'border-red-300/70 bg-red-50 text-red-700'
-                  : 'border-sky-300/70 bg-sky-50 text-sky-700'
+                  ? 'border-red-300/70 bg-red-50 text-red-700 dark:border-red-700/60 dark:bg-red-950/40 dark:text-red-200'
+                  : 'border-sky-300/70 bg-sky-50 text-sky-700 dark:border-sky-700/60 dark:bg-sky-950/40 dark:text-sky-200'
             }`}
           >
             {feedback.tone === 'success' ? (

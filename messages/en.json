@@ -93,6 +93,12 @@
     "pause": "Pause",
     "speed": "Playback Speed"
   },
+  "theme": {
+    "label": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
   "shadow": {
     "modeLabel": "Shadow Mode",
     "rewindButton": "Rewind",
@@ -103,6 +109,8 @@
   "studyRoom": {
     "echoScribeMode": "Echo Scribe",
     "ccMode": "CC Subtitles",
+    "studyMode": "Study Room",
+    "cinemaMode": "Subtitle Theater",
     "exportMd": "Export MD",
     "back": "Back",
     "showCC": "Show Subtitles",

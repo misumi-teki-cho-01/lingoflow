@@ -32,9 +32,9 @@ interface VideoCardProps {
 }
 
 const SOURCE_BADGE_STYLES: Record<string, string> = {
-  youtube: 'bg-red-100 text-muted-foreground',
-  bilibili: 'bg-sky-100 text-muted-foreground',
-  local: 'bg-emerald-100 text-muted-foreground',
+  youtube: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-200',
+  bilibili: 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-200',
+  local: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200',
 };
 
 /**

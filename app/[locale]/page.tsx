@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
+import { ThemeSwitcher } from '@/components/layout/theme-switcher';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -50,7 +51,10 @@ export default function LandingPage() {
       <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
           <span className="text-lg font-bold tracking-tight">LingoFlow</span>
-          <LocaleSwitcher />
+          <div className="flex items-center gap-1">
+            <ThemeSwitcher />
+            <LocaleSwitcher />
+          </div>
         </div>
       </header>
 

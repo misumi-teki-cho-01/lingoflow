@@ -93,6 +93,12 @@
     "pause": "暂停",
     "speed": "播放速度"
   },
+  "theme": {
+    "label": "主题",
+    "system": "系统",
+    "light": "浅色",
+    "dark": "深色"
+  },
   "shadow": {
     "modeLabel": "影子模式",
     "rewindButton": "回溯",
@@ -103,6 +109,8 @@
   "studyRoom": {
     "echoScribeMode": "Echo Scribe",
     "ccMode": "CC 字幕",
+    "studyMode": "学习室",
+    "cinemaMode": "字幕剧场",
     "exportMd": "导出 MD",
     "back": "返回",
     "showCC": "显示字幕",
