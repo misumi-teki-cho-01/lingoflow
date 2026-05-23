@@ -37,31 +37,17 @@ function buildHeader(metadata: ExportMetadata): string {
   return lines.join('\n');
 }
 
-// ── Echo Scribe export (HTML → Markdown) ──────────────────────────────────
+// ── Echo Scribe context (HTML → Markdown) ─────────────────────────────────
 /**
- * Converts TipTap HTML + metadata into a Markdown document.
+ * Converts TipTap HTML + metadata into Markdown context for AI review.
  */
 export function convertToMarkdown(html: string, metadata: ExportMetadata): string {
   return buildHeader(metadata) + td.turndown(html);
 }
 
-// ── CC Transcript export (segments → Markdown) ───────────────────────────
+// ── CC Transcript context with selected-word highlights ──────────────────
 /**
- * Converts raw transcript segments + metadata into a Markdown document.
- * Each segment is rendered as `[MM:SS] text`.
- */
-export function convertTranscriptToMarkdown(
-  segments: TranscriptSegment[],
-  metadata: ExportMetadata,
-): string {
-  const body = segments.map((s) => `[${formatTime(s.start_time)}] ${s.text}`).join('\n');
-  return buildHeader(metadata) + body;
-}
-
-// ── CC Transcript export with selected-word highlights ───────────────────
-/**
- * Same as convertTranscriptToMarkdown, but wraps selected words/phrases in **bold**
- * so the AI can locate them precisely in the context.
+ * Wraps selected words/phrases in **bold** so the AI can locate them precisely.
  */
 export function convertTranscriptToMarkdownWithHighlights(
   segments: TranscriptSegment[],
@@ -92,17 +78,4 @@ export function convertTranscriptToMarkdownWithHighlights(
     .join('\n');
 
   return buildHeader(metadata) + body;
-}
-
-// ── Download helper ────────────────────────────────────────────────────────
-export function downloadMarkdown(content: string, filename: string) {
-  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }

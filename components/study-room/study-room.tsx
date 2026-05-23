@@ -21,9 +21,7 @@ import { DASH_SEPARATOR_REGEX, stripPunctuation } from '@/lib/utils/format';
 import type { StudyMode } from '@/lib/study-room/study-mode-routing';
 import {
   convertToMarkdown,
-  convertTranscriptToMarkdown,
   convertTranscriptToMarkdownWithHighlights,
-  downloadMarkdown,
   type ExportMetadata,
 } from '@/lib/utils/markdown';
 import { saveEnhancedTranscript } from '@/lib/api/transcripts';
@@ -32,16 +30,7 @@ import type { TranscriptSegment, CcSelection, DragState } from '@/types/transcri
 import type { TranscriptSource } from '@/lib/pipeline/transcription-pipeline';
 import type { VideoMeta } from '@/lib/utils/video-meta';
 import type { VocabularyExplanation } from '@/lib/ai/services';
-import {
-  Download,
-  Eye,
-  EyeOff,
-  Sparkles,
-  CheckCircle2,
-  TriangleAlert,
-  Wand2,
-  X,
-} from 'lucide-react';
+import { Eye, EyeOff, Sparkles, CheckCircle2, TriangleAlert, Wand2, X } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export interface StudyRoomProps {
@@ -421,20 +410,6 @@ export function StudyRoom({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [mode, toggleCurrentLineLoop]);
 
-  // ── Export ────────────────────────────────────────────────────────────────
-  const handleExport = () => {
-    const safeName = (videoMeta.title || videoId).replace(/[^a-z0-9]/gi, '_').toLowerCase();
-
-    if (mode === 'scribe') {
-      const html = editorRef.current?.getHtml() ?? '';
-      const md = convertToMarkdown(html, exportMeta);
-      downloadMarkdown(md, `EchoScribe_${safeName}.md`);
-    } else {
-      const md = convertTranscriptToMarkdown(liveSegments, exportMeta);
-      downloadMarkdown(md, `Transcript_${safeName}.md`);
-    }
-  };
-
   // ── Context text providers (for VocabularyReviewModal) ────────────────────
   const getScribeContextText = useCallback(async (): Promise<string> => {
     const html = editorRef.current?.getHtml() ?? '';
@@ -771,16 +746,6 @@ export function StudyRoom({
                 {t('aiExplain')} ({ccSelections.length})
               </Button>
             )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              className="h-8 gap-1.5 text-xs"
-            >
-              <Download className="h-3.5 w-3.5" />
-              {t('exportMd')}
-            </Button>
           </>
         }
         trailing={
