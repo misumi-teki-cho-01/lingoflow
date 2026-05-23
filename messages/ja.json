@@ -57,6 +57,13 @@
     "localVideoUnsupported": "現在対応している動画ファイルは .mp4 と .webm のみです。",
     "localSubtitleUnsupported": "現在対応している字幕ファイルは .srt と .vtt のみです。",
     "localSubtitleParseFailed": "有効な字幕キューを解析できませんでした。タイムスタンプ形式を確認してください。",
+    "entryMode": {
+      "cc": "CC",
+      "scribe": "Scribe",
+      "fill": "穴埋め",
+      "cinema": "シアター",
+      "cinemaShort": "シアター"
+    },
     "recentImports": "共有ライブラリ",
     "noVideos": "まだ動画がインポートされていません",
     "noVideosHint": "リンクを貼り付けて、最初の動画を共有ライブラリに追加",
@@ -111,6 +118,7 @@
     "ccMode": "CC字幕",
     "studyMode": "学習室",
     "cinemaMode": "字幕シアター",
+    "modeNavLabel": "動画モード",
     "exportMd": "MDエクスポート",
     "back": "戻る",
     "showCC": "字幕を表示",

@@ -7,13 +7,9 @@ export default async function CinemaPage({
   params: Promise<{ locale: string; id: string }>;
 }) {
   const { locale, id } = await params;
-  const { videoUrl, segments } = await loadStudyVideoData(id, locale);
+  const { videoMeta, videoUrl, segments } = await loadStudyVideoData(id, locale);
 
   return (
-    <CinemaRoom
-      videoId={id}
-      videoUrl={videoUrl}
-      segments={segments}
-    />
+    <CinemaRoom videoId={id} title={videoMeta.title} videoUrl={videoUrl} segments={segments} />
   );
 }

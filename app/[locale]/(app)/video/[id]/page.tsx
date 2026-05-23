@@ -1,5 +1,6 @@
-import { StudyRoom, type StudyMode } from '@/components/study-room/study-room';
+import { StudyRoom } from '@/components/study-room/study-room';
 import { loadStudyVideoData } from '@/lib/study-room/study-video-data';
+import { parseStudyMode } from '@/lib/study-room/study-mode-routing';
 
 // ── Page ───────────────────────────────────────────────────────────────────
 export default async function VideoPage({
@@ -12,7 +13,7 @@ export default async function VideoPage({
   const { locale, id } = await params;
   const { mode } = await searchParams;
 
-  const defaultMode: StudyMode = mode === 'scribe' ? 'scribe' : 'cc';
+  const defaultMode = parseStudyMode(mode);
   const {
     videoMeta,
     videoUrl,

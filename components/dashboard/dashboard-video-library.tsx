@@ -6,8 +6,10 @@ import { Search, LayoutGrid, List, Play, Tv2, Loader2, AlertTriangle } from 'luc
 import { VideoCard, type VideoCardData } from '@/components/video/video-card';
 import { deleteVideo, fetchVideosPage } from '@/app/actions/videos';
 import { deleteLocalVideo } from '@/lib/utils/local-media-store';
+import { parseVideoEntryMode, type VideoEntryMode } from '@/lib/study-room/study-mode-routing';
 
 const PAGE_SIZE = 24;
+const ENTRY_MODE_STORAGE_KEY = 'lingoflow-dashboard-entry-mode';
 
 interface DashboardVideoLibraryProps {
   videos: VideoCardData[]; // initial SSR batch
@@ -31,12 +33,20 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'channels'>('grid');
+  const [entryMode, setEntryMode] = useState<VideoEntryMode>('cc');
 
   useEffect(() => {
     const saved = localStorage.getItem('dashboard-view-mode');
     if (saved === 'grid' || saved === 'channels') {
       setViewMode(saved);
     }
+    setEntryMode(parseVideoEntryMode(localStorage.getItem(ENTRY_MODE_STORAGE_KEY)));
+
+    const handleEntryModeChange = (event: Event) => {
+      setEntryMode(parseVideoEntryMode((event as CustomEvent).detail));
+    };
+    window.addEventListener('lingoflow-entry-mode-change', handleEntryModeChange);
+    return () => window.removeEventListener('lingoflow-entry-mode-change', handleEntryModeChange);
   }, []);
 
   const handleViewMode = (mode: 'grid' | 'channels') => {
@@ -321,6 +331,7 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
                 <VideoCard
                   key={video.id}
                   video={video}
+                  entryMode={entryMode}
                   onDelete={handleDeleteRequest}
                   isDeleting={isDeletePending && deleteTarget?.id === video.id}
                 />
@@ -344,6 +355,7 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
                       <div key={video.id} className="w-[240px] shrink-0">
                         <VideoCard
                           video={video}
+                          entryMode={entryMode}
                           onDelete={handleDeleteRequest}
                           isDeleting={isDeletePending && deleteTarget?.id === video.id}
                         />

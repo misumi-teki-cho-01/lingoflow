@@ -57,6 +57,13 @@
     "localVideoUnsupported": "Only .mp4 and .webm video files are supported for now.",
     "localSubtitleUnsupported": "Only .srt and .vtt subtitle files are supported for now.",
     "localSubtitleParseFailed": "No valid subtitle cues were found. Check the timestamp format.",
+    "entryMode": {
+      "cc": "CC",
+      "scribe": "Scribe",
+      "fill": "Fill",
+      "cinema": "Theater",
+      "cinemaShort": "Theater"
+    },
     "recentImports": "Shared Library",
     "noVideos": "No videos imported yet",
     "noVideosHint": "Paste a link to add the first video to the shared library",
@@ -111,6 +118,7 @@
     "ccMode": "CC Subtitles",
     "studyMode": "Study Room",
     "cinemaMode": "Subtitle Theater",
+    "modeNavLabel": "Video mode",
     "exportMd": "Export MD",
     "back": "Back",
     "showCC": "Show Subtitles",

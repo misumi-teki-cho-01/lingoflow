@@ -6,12 +6,12 @@ import { SessionGuard } from '@/components/auth/session-guard';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isCinemaPage = pathname.endsWith('/cinema');
+  const isVideoPage = pathname.includes('/video/');
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <SessionGuard />
-      {!isCinemaPage && <Header />}
+      {!isVideoPage && <Header />}
       <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );

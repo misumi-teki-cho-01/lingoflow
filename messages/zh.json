@@ -57,6 +57,13 @@
     "localVideoUnsupported": "目前只支持 .mp4 或 .webm 视频文件。",
     "localSubtitleUnsupported": "目前只支持 .srt 或 .vtt 字幕文件。",
     "localSubtitleParseFailed": "没有解析到有效字幕，请检查时间轴格式。",
+    "entryMode": {
+      "cc": "CC",
+      "scribe": "Scribe",
+      "fill": "填词",
+      "cinema": "剧场",
+      "cinemaShort": "剧场"
+    },
     "recentImports": "共享视频库",
     "noVideos": "还没有导入任何视频",
     "noVideosHint": "粘贴链接，把第一个视频加入共享视频库",
@@ -111,6 +118,7 @@
     "ccMode": "CC 字幕",
     "studyMode": "学习室",
     "cinemaMode": "字幕剧场",
+    "modeNavLabel": "视频模式",
     "exportMd": "导出 MD",
     "back": "返回",
     "showCC": "显示字幕",

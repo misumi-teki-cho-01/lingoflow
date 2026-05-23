@@ -6,6 +6,11 @@ import { importVideo, type ImportVideoState } from '@/app/actions/import-video';
 import { useRouter } from '@/i18n/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  buildVideoModeHref,
+  parseVideoEntryMode,
+  type VideoEntryMode,
+} from '@/lib/study-room/study-mode-routing';
 import { parseSubtitleFile } from '@/lib/utils/subtitle-parser';
 import {
   createLocalVideoId,
@@ -17,6 +22,7 @@ import { Loader2, ArrowRight, FileVideo, FileText } from 'lucide-react';
 
 const INITIAL_STATE: ImportVideoState = {};
 const SUPPORTED_VIDEO_EXTENSIONS = new Set(['mp4', 'webm']);
+const ENTRY_MODE_STORAGE_KEY = 'lingoflow-dashboard-entry-mode';
 
 function getFileExtension(fileName: string): string {
   return fileName.split('.').pop()?.toLowerCase() ?? '';
@@ -62,6 +68,7 @@ export function VideoImportForm() {
   const [localSubtitleFile, setLocalSubtitleFile] = useState<File | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isLocalPending, setIsLocalPending] = useState(false);
+  const [entryMode, setEntryMode] = useState<VideoEntryMode>('cc');
 
   // Server Action error codes → i18n strings
   const ERROR_MESSAGES: Record<string, string> = {
@@ -81,6 +88,16 @@ export function VideoImportForm() {
   useEffect(() => {
     if (mode === 'url') inputRef.current?.focus();
   }, [mode]);
+
+  useEffect(() => {
+    setEntryMode(parseVideoEntryMode(localStorage.getItem(ENTRY_MODE_STORAGE_KEY)));
+  }, []);
+
+  const handleEntryModeChange = (nextMode: VideoEntryMode) => {
+    setEntryMode(nextMode);
+    localStorage.setItem(ENTRY_MODE_STORAGE_KEY, nextMode);
+    window.dispatchEvent(new CustomEvent('lingoflow-entry-mode-change', { detail: nextMode }));
+  };
 
   const handleLocalImport = async () => {
     setLocalError(null);
@@ -136,7 +153,7 @@ export function VideoImportForm() {
         await uploadTranscript(videoId, segments);
       }
 
-      router.push(`/video/${videoId}`);
+      router.push(buildVideoModeHref(videoId, entryMode));
       router.refresh();
     } catch (err) {
       if (videoId) {
@@ -150,6 +167,38 @@ export function VideoImportForm() {
 
   return (
     <div className="w-full max-w-2xl">
+      <div className="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs">
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center rounded-full border border-border bg-background p-0.5">
+            {(['cc', 'scribe', 'fill'] as const).map((studyMode) => (
+              <button
+                key={studyMode}
+                type="button"
+                onClick={() => handleEntryModeChange(studyMode)}
+                className={`rounded-full px-3 py-1 font-medium transition-colors ${
+                  entryMode === studyMode
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t(`entryMode.${studyMode}`)}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => handleEntryModeChange('cinema')}
+            className={`rounded-full border px-3 py-1 font-medium transition-colors ${
+              entryMode === 'cinema'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+            }`}
+          >
+            {t('entryMode.cinema')}
+          </button>
+        </div>
+      </div>
+
       <div className="mb-3 flex w-fit rounded-lg border border-border bg-background p-1 text-sm">
         <button
           type="button"
@@ -177,7 +226,8 @@ export function VideoImportForm() {
 
       {mode === 'url' ? (
         <form action={action}>
-          <div className="flex gap-2">
+          <input type="hidden" name="mode" value={entryMode} />
+          <div className="flex items-stretch gap-2">
             <div className="relative flex-1">
               <Input
                 ref={inputRef}
@@ -189,7 +239,12 @@ export function VideoImportForm() {
                 autoComplete="off"
               />
             </div>
-            <Button type="submit" size="lg" disabled={isPending} className="shrink-0 gap-2">
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isPending}
+              className="h-11 shrink-0 gap-2 px-4"
+            >
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />

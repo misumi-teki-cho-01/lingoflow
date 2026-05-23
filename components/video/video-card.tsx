@@ -2,11 +2,21 @@
 
 import { Link } from '@/i18n/navigation';
 import { useState } from 'react';
-import { Play, Clock, Film, Trash2 } from 'lucide-react';
+import {
+  Captions,
+  Clock,
+  Clapperboard,
+  Film,
+  Headphones,
+  PenLine,
+  Play,
+  Trash2,
+} from 'lucide-react';
 import { formatTime } from '@/lib/utils/format';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN, ja, enUS, type Locale } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
+import { buildVideoModeHref, type VideoEntryMode } from '@/lib/study-room/study-mode-routing';
 
 export interface VideoCardData {
   id: string;
@@ -27,6 +37,7 @@ const DATE_LOCALES: Record<string, Locale> = {
 
 interface VideoCardProps {
   video: VideoCardData;
+  entryMode?: VideoEntryMode;
   onDelete?: (video: VideoCardData) => void;
   isDeleting?: boolean;
 }
@@ -41,7 +52,19 @@ const SOURCE_BADGE_STYLES: Record<string, string> = {
  * Reusable video card — links to /video/{video_ext_id}.
  * Displays thumbnail, title, duration badge, and compact metadata.
  */
-export function VideoCard({ video, onDelete, isDeleting = false }: VideoCardProps) {
+const ENTRY_MODE_ICONS = {
+  cc: Captions,
+  scribe: Headphones,
+  fill: PenLine,
+  cinema: Clapperboard,
+};
+
+export function VideoCard({
+  video,
+  entryMode = 'cc',
+  onDelete,
+  isDeleting = false,
+}: VideoCardProps) {
   const locale = useLocale();
   const t = useTranslations('dashboard');
   const [imageFailed, setImageFailed] = useState(false);
@@ -56,6 +79,8 @@ export function VideoCard({ video, onDelete, isDeleting = false }: VideoCardProp
     addSuffix: true,
     locale: DATE_LOCALES[locale] ?? enUS,
   });
+
+  const href = buildVideoModeHref(video.video_ext_id, entryMode);
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5">
@@ -72,7 +97,7 @@ export function VideoCard({ video, onDelete, isDeleting = false }: VideoCardProp
         </button>
       )}
 
-      <Link href={`/video/${video.video_ext_id}`} className="flex flex-1 flex-col">
+      <Link href={href} className="flex flex-1 flex-col">
         {/* Thumbnail */}
         <div className="relative aspect-video w-full overflow-hidden bg-muted">
           {thumbnail ? (
@@ -133,6 +158,33 @@ export function VideoCard({ video, onDelete, isDeleting = false }: VideoCardProp
           </div>
         </div>
       </Link>
+      <div className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2">
+        <div className="flex items-center rounded-full border border-border bg-muted/30 p-0.5">
+          {(['cc', 'scribe', 'fill'] as const).map((mode) => {
+            const Icon = ENTRY_MODE_ICONS[mode];
+            return (
+              <Link
+                key={mode}
+                href={buildVideoModeHref(video.video_ext_id, mode)}
+                title={t(`entryMode.${mode}`)}
+                aria-label={t(`entryMode.${mode}`)}
+                className="flex h-6 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </Link>
+            );
+          })}
+        </div>
+        <Link
+          href={buildVideoModeHref(video.video_ext_id, 'cinema')}
+          title={t('entryMode.cinema')}
+          aria-label={t('entryMode.cinema')}
+          className="flex h-7 items-center gap-1.5 rounded-full border border-border bg-background px-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+        >
+          <Clapperboard className="h-3.5 w-3.5" />
+          <span>{t('entryMode.cinemaShort')}</span>
+        </Link>
+      </div>
     </article>
   );
 }

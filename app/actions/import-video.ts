@@ -6,6 +6,7 @@ import { fetchVideoMeta } from '@/lib/utils/video-meta';
 import { runTranscriptionPipeline } from '@/lib/pipeline/transcription-pipeline';
 import { getVideoByExtId, insertVideo } from '@/lib/db/videos';
 import { upsertTranscript } from '@/lib/db/transcripts';
+import { buildVideoModeHref, parseVideoEntryMode } from '@/lib/study-room/study-mode-routing';
 
 export interface ImportVideoState {
   error?: string; // i18n key, e.g. "invalidUrl" — mapped to t() in the form
@@ -28,6 +29,7 @@ export async function importVideo(
   formData: FormData,
 ): Promise<ImportVideoState> {
   const url = formData.get('url')?.toString().trim() ?? '';
+  const entryMode = parseVideoEntryMode(formData.get('mode')?.toString());
 
   // ── 1. Validate URL ────────────────────────────────────────────────────────
   const parsed = parseVideoUrl(url);
@@ -41,7 +43,7 @@ export async function importVideo(
   const existing = await getVideoByExtId(videoId);
 
   if (existing) {
-    redirect(`/${locale}/video/${videoId}`);
+    redirect(`/${locale}${buildVideoModeHref(videoId, entryMode)}`);
   }
 
   // ── 3. Fetch metadata + subtitles in parallel ──────────────────────────────
@@ -80,5 +82,5 @@ export async function importVideo(
   }
 
   // ── 6. Redirect to study page ─────────────────────────────────────────────
-  redirect(`/${locale}/video/${videoId}`);
+  redirect(`/${locale}${buildVideoModeHref(videoId, entryMode)}`);
 }

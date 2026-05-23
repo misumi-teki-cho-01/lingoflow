@@ -2,26 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import {
-  Captions,
-  CheckCircle2,
-  ChevronLeft,
-  Clapperboard,
-  FastForward,
-  Rewind,
-  TriangleAlert,
-} from 'lucide-react';
-import { Link } from '@/i18n/navigation';
+import { CheckCircle2, TriangleAlert } from 'lucide-react';
 import { useTranscriptSync } from '@/hooks/use-transcript-sync';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import { SubtitleUploadPanel } from '@/components/transcript/subtitle-upload-panel';
 import { VideoProgressLine } from '@/components/video/video-progress-line';
+import { useSeekStep, VideoTransportControls } from '@/components/video/video-transport-controls';
+import { LocaleSwitcher } from '@/components/layout/locale-switcher';
+import { LogoutButton } from '@/components/layout/logout-button';
 import { ThemeSwitcher } from '@/components/layout/theme-switcher';
-import { Button } from '@/components/ui/button';
+import { VideoSessionHeader } from './video-session-header';
 import type { TranscriptSegment } from '@/types/transcript';
 
 interface CinemaRoomProps {
   videoId: string;
+  title?: string | null;
   videoUrl: string;
   segments: TranscriptSegment[];
   transcriptError?: string;
@@ -33,16 +28,6 @@ type FeedbackState = {
 } | null;
 
 const HEADER_IDLE_MS = 1600;
-const SEEK_STEP_KEY = 'lingoflow-seek-step';
-const DEFAULT_SEEK_STEP = 5;
-const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
-
-function getInitialSeekStep() {
-  if (typeof window === 'undefined') return DEFAULT_SEEK_STEP;
-  const saved = window.localStorage.getItem(SEEK_STEP_KEY);
-  const parsed = saved ? Number(saved) : NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SEEK_STEP;
-}
 
 function getCenteredSubtitleRows(
   segments: TranscriptSegment[],
@@ -64,6 +49,7 @@ function getCenteredSubtitleRows(
 
 export function CinemaRoom({
   videoId,
+  title,
   videoUrl,
   segments: initialSegments,
   transcriptError,
@@ -76,8 +62,7 @@ export function CinemaRoom({
   const [liveSegments, setLiveSegments] = useState<TranscriptSegment[]>(initialSegments);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [showHeader, setShowHeader] = useState(true);
-  const [seekStep, setSeekStep] = useState(getInitialSeekStep);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  const seekStep = useSeekStep();
 
   const player = useVideoPlayer({ containerRef, videoUrl });
   const { activeSegmentIndex } = useTranscriptSync(liveSegments, player.currentTime);
@@ -115,20 +100,6 @@ export function CinemaRoom({
     setShowHeader(true);
     scheduleHeaderHide();
   }, [scheduleHeaderHide]);
-
-  const handleSeekStepChange = useCallback((value: number) => {
-    setSeekStep(value);
-    window.localStorage.setItem(SEEK_STEP_KEY, String(value));
-    window.dispatchEvent(new Event('lingoflow-seek-step-change'));
-  }, []);
-
-  const handlePlaybackRateChange = useCallback(
-    (value: number) => {
-      setPlaybackRate(value);
-      player.setPlaybackRate(value);
-    },
-    [player],
-  );
 
   const focusKeyboardSurface = useCallback(() => {
     shellRef.current?.focus({ preventScroll: true });
@@ -180,7 +151,10 @@ export function CinemaRoom({
       onMouseMove={revealHeader}
       onFocus={revealHeader}
     >
-      <header
+      <VideoSessionHeader
+        videoId={videoId}
+        title={title}
+        activeMode="cinema"
         onMouseEnter={() => {
           headerHoveredRef.current = true;
           clearHeaderTimer();
@@ -190,87 +164,18 @@ export function CinemaRoom({
           headerHoveredRef.current = false;
           scheduleHeaderHide();
         }}
-        className={`absolute inset-x-0 top-0 z-30 flex items-center gap-3 border-b border-border/70 bg-background/80 px-4 py-2 shadow-sm backdrop-blur-md transition-all duration-300 ${
-          showHeader
-            ? 'translate-y-0 opacity-100'
-            : 'pointer-events-none -translate-y-2 opacity-0'
+        className={`absolute inset-x-0 top-0 transition-all duration-300 ${
+          showHeader ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
         }`}
-      >
-        <Link
-          href="/dashboard"
-          className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-          {t('back')}
-        </Link>
-
-        <div className="flex-1" />
-
-        <ThemeSwitcher />
-
-        <div className="flex items-center gap-1 rounded-full border border-border bg-muted/30 px-1 py-0.5 text-xs">
-          <select
-            value={seekStep}
-            onChange={(event) => handleSeekStepChange(Number(event.target.value))}
-            disabled={!player.isReady}
-            className="rounded-full border border-border bg-background px-2 py-1 text-xs text-muted-foreground outline-none transition-colors hover:text-foreground disabled:opacity-40"
-            title="Fast-forward/Rewind duration"
-          >
-            {Array.from({ length: 10 }, (_, i) => i + 1).map((seconds) => (
-              <option key={seconds} value={seconds}>
-                ±{seconds}s
-              </option>
-            ))}
-          </select>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!player.isReady}
-            onClick={() => player.seekBy(-seekStep)}
-            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
-            title={`Rewind ${seekStep}s`}
-          >
-            <Rewind className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!player.isReady}
-            onClick={() => player.seekBy(seekStep)}
-            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
-            title={`Forward ${seekStep}s`}
-          >
-            <FastForward className="h-3.5 w-3.5" />
-          </Button>
-          <select
-            value={playbackRate}
-            onChange={(event) => handlePlaybackRateChange(Number(event.target.value))}
-            disabled={!player.isReady}
-            className="rounded-full border border-border bg-background px-2 py-1 text-xs text-muted-foreground outline-none transition-colors hover:text-foreground disabled:opacity-40"
-            title="Playback rate"
-          >
-            {PLAYBACK_RATES.map((rate) => (
-              <option key={rate} value={rate}>
-                {rate}x
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center rounded-full border border-border bg-muted/30 p-0.5 text-xs">
-          <Link
-            href={`/video/${videoId}?mode=cc`}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1 font-medium text-muted-foreground transition-all hover:text-foreground"
-          >
-            <Captions className="h-3.5 w-3.5" />
-            {t('studyMode')}
-          </Link>
-          <span className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground shadow-sm">
-            <Clapperboard className="h-3.5 w-3.5" />
-            {t('cinemaMode')}
-          </span>
-        </div>
-      </header>
+        actions={<VideoTransportControls player={player} />}
+        trailing={
+          <>
+            <ThemeSwitcher />
+            <LocaleSwitcher />
+            <LogoutButton />
+          </>
+        }
+      />
 
       {feedback && (
         <div className="absolute inset-x-0 top-12 z-20 px-4">

@@ -1,71 +1,20 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Play, Pause, Volume2, VolumeX, Rewind, FastForward } from 'lucide-react';
+import { useEffect } from 'react';
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatTime } from '@/lib/utils/format';
+import { VideoProgressLine } from '@/components/video/video-progress-line';
+import { useSeekStep, VideoTransportControls } from '@/components/video/video-transport-controls';
 import type { UseVideoPlayerReturn } from '@/hooks/use-video-player';
-
-const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
-const SEEK_STEP_KEY = 'lingoflow-seek-step';
-const SEEK_STEP_CHANGED_EVENT = 'lingoflow-seek-step-change';
-const DEFAULT_SEEK_STEP = 5;
 
 interface VideoControlsProps {
   player: UseVideoPlayerReturn;
 }
 
-function getSeekStepSnapshot() {
-  if (typeof window === 'undefined') return DEFAULT_SEEK_STEP;
-  const saved = window.localStorage.getItem(SEEK_STEP_KEY);
-  const parsed = saved ? Number(saved) : NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SEEK_STEP;
-}
-
-function subscribeToSeekStep(onStoreChange: () => void) {
-  if (typeof window === 'undefined') {
-    return () => {};
-  }
-
-  window.addEventListener('storage', onStoreChange);
-  window.addEventListener(SEEK_STEP_CHANGED_EVENT, onStoreChange);
-
-  return () => {
-    window.removeEventListener('storage', onStoreChange);
-    window.removeEventListener(SEEK_STEP_CHANGED_EVENT, onStoreChange);
-  };
-}
-
 export function VideoControls({ player }: VideoControlsProps) {
-  const {
-    play,
-    pause,
-    seekTo,
-    seekBy,
-    togglePlay,
-    setPlaybackRate,
-    toggleMute,
-    playerState,
-    currentTime,
-    duration,
-    isReady,
-    isMuted,
-  } = player;
+  const { play, pause, seekBy, togglePlay, toggleMute, playerState, isReady, isMuted } = player;
 
-  const seekStep = useSyncExternalStore(
-    subscribeToSeekStep,
-    getSeekStepSnapshot,
-    () => DEFAULT_SEEK_STEP,
-  );
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragValue, setDragValue] = useState(0);
-  const [rate, setRate] = useState(1);
-
-  const handleSeekStepChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = Number(e.target.value);
-    window.localStorage.setItem(SEEK_STEP_KEY, String(val));
-    window.dispatchEvent(new Event(SEEK_STEP_CHANGED_EVENT));
-  };
+  const seekStep = useSeekStep();
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -133,57 +82,11 @@ export function VideoControls({ player }: VideoControlsProps) {
   }, [seekStep, seekBy, togglePlay]);
 
   const isPlaying = playerState === 'playing';
-  const displayTime = isDragging ? dragValue : currentTime;
-  const progress = duration > 0 ? (displayTime / duration) * 100 : 0;
-
-  function handleRangeChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setIsDragging(true);
-    setDragValue(Number(e.target.value));
-  }
-
-  function handleRangeCommit(
-    e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>,
-  ) {
-    const val = Number((e.target as HTMLInputElement).value);
-    seekTo(val);
-    setIsDragging(false);
-  }
-
-  function handleRateChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const newRate = Number(e.target.value);
-    setRate(newRate);
-    setPlaybackRate(newRate);
-  }
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2 shrink-0">
       {/* Progress bar */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="w-10 text-right tabular-nums">{formatTime(displayTime)}</span>
-        <input
-          type="range"
-          min={0}
-          max={duration || 100}
-          step={0.1}
-          value={displayTime}
-          disabled={!isReady}
-          onChange={handleRangeChange}
-          onMouseUp={handleRangeCommit}
-          onTouchEnd={handleRangeCommit}
-          onKeyDown={(e) => {
-            // Override native step (0.1 s) so arrow keys use the user-defined seekStep
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-              e.preventDefault();
-              seekBy(e.key === 'ArrowLeft' ? -seekStep : seekStep);
-            }
-          }}
-          className="flex-1 h-1.5 cursor-pointer appearance-none rounded-full disabled:opacity-40"
-          style={{
-            background: `linear-gradient(to right, hsl(var(--primary)) ${progress}%, hsl(var(--muted)) ${progress}%)`,
-          }}
-        />
-        <span className="w-10 tabular-nums">{formatTime(duration)}</span>
-      </div>
+      <VideoProgressLine player={player} seekStep={seekStep} className="gap-2 px-0" />
 
       {/* Controls row */}
       <div className="flex items-center gap-1">
@@ -213,58 +116,10 @@ export function VideoControls({ player }: VideoControlsProps) {
 
         <div className="flex-1" />
 
-        {/* Seek Controls */}
-        <div className="flex items-center gap-1 border-r border-border pr-2 mr-1">
-          <select
-            value={seekStep}
-            onChange={handleSeekStepChange}
-            disabled={!isReady}
-            className="rounded border border-border bg-background px-1.5 py-0.5 text-xs disabled:opacity-40 cursor-pointer outline-none focus:ring-1 focus:ring-ring"
-            title="Fast-forward/Rewind duration"
-          >
-            {Array.from({ length: 10 }, (_, i) => i + 1).map((s) => (
-              <option key={s} value={s}>
-                ±{s}s
-              </option>
-            ))}
-          </select>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!isReady}
-            onClick={() => seekBy(-seekStep)}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title={`Rewind ${seekStep}s (Cmd/Ctrl+J or ←)`}
-          >
-            <Rewind className="h-3.5 w-3.5" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!isReady}
-            onClick={() => seekBy(seekStep)}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title={`Forward ${seekStep}s (Cmd/Ctrl+L or →)`}
-          >
-            <FastForward className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-
-        {/* Playback rate */}
-        <select
-          value={rate}
-          onChange={handleRateChange}
-          disabled={!isReady}
-          className="rounded border border-border bg-background px-2 py-0.5 text-xs disabled:opacity-40 cursor-pointer"
-        >
-          {PLAYBACK_RATES.map((r) => (
-            <option key={r} value={r}>
-              {r}x
-            </option>
-          ))}
-        </select>
+        <VideoTransportControls
+          player={player}
+          className="border-transparent bg-transparent px-0 py-0"
+        />
       </div>
     </div>
   );
