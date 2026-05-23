@@ -20,9 +20,13 @@ export function ThemeSwitcher() {
     () => false,
   );
 
-  const activeTheme = mounted ? theme ?? 'system' : 'system';
+  const activeTheme = mounted ? (theme ?? 'system') : 'system';
   const Icon =
-    activeTheme === 'system' ? Monitor : resolvedTheme === 'dark' || activeTheme === 'dark' ? Moon : Sun;
+    activeTheme === 'system'
+      ? Monitor
+      : resolvedTheme === 'dark' || activeTheme === 'dark'
+        ? Moon
+        : Sun;
 
   return (
     <label className="inline-flex h-7 items-center gap-1.5 rounded-full border border-transparent bg-transparent px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-within:bg-muted focus-within:text-foreground">
