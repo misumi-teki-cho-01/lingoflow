@@ -211,6 +211,8 @@
     "searchPlaceholder": "在转录中搜索...",
     "searchEmpty": "未找到包含 \"{query}\" 的片段",
     "autoScroll": "自动滚动",
+    "lockCurrentLine": "锁定当前行循环播放（L）",
+    "unlockLoop": "解除循环锁定（L）",
     "followProgress": "追随进度",
     "explainWords": "解释 {count} 个词",
     "clearSelection": "清除选择",

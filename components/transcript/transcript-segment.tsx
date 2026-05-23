@@ -290,6 +290,15 @@ export const TranscriptSegmentRow = memo(
     ref,
   ) {
     const showPause = isActive && isPlaying;
+    const playLabel = `${showPause ? 'Pause' : 'Play'} at ${formatTime(segment.start_time)}`;
+
+    const handlePlay = () => {
+      if (onPlay) {
+        onPlay(segment.start_time, isActive);
+      } else {
+        onSeek(segment.start_time);
+      }
+    };
 
     return (
       <div
@@ -307,46 +316,54 @@ export const TranscriptSegmentRow = memo(
         className={`
             group flex gap-4 rounded-lg px-4 py-3 transition-all duration-200 outline-none
             ${wordClickMode ? '' : 'cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/50'}
-            ${isActive ? 'bg-primary/10 ring-1 ring-inset ring-primary/20' : 'hover:bg-muted/50'}
+            ${
+              isActive
+                ? 'bg-primary/10 ring-1 ring-inset ring-primary/20'
+                : wordClickMode
+                  ? 'hover:bg-primary/5 hover:ring-1 hover:ring-inset hover:ring-primary/10'
+                  : 'hover:bg-muted/50'
+            }
           `}
       >
-        {/* Timestamp & play button */}
-        <div className="mt-0.5 flex flex-col items-center gap-1 w-10 shrink-0">
+        {/* Left playback target */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handlePlay();
+          }}
+          aria-label={playLabel}
+          title={playLabel}
+          className={`
+              group/play-target -my-1 flex w-12 shrink-0 flex-col items-center justify-center gap-1 rounded-md px-1.5 py-1
+              transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50
+              ${
+                isActive
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground/50 hover:bg-primary/10 hover:text-primary hover:ring-1 hover:ring-inset hover:ring-primary/20'
+              }
+            `}
+        >
           <span
             className={`
                 font-mono text-[10px] tabular-nums transition-colors
-                ${isActive ? 'text-primary font-bold' : 'text-muted-foreground/50 group-hover:text-muted-foreground'}
+                ${isActive ? 'font-bold' : 'group-hover:text-muted-foreground group-hover/play-target:text-primary'}
               `}
           >
             {formatTime(segment.start_time)}
           </span>
-          {/* ▶ is always a real button — the only seek trigger in word-click mode */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onPlay) {
-                onPlay(segment.start_time, isActive);
-              } else {
-                onSeek(segment.start_time);
-              }
-            }}
-            aria-label={`${showPause ? 'Pause' : 'Play'} at ${formatTime(segment.start_time)}`}
-            className={`transition-all duration-200 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary ${
-              isActive
-                ? 'opacity-100 scale-100'
-                : 'opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100'
-            }`}
-          >
-            {showPause ? (
-              <Pause className="h-3 w-3 fill-primary text-primary" />
-            ) : (
-              <Play
-                className={`h-3 w-3 ${isActive ? 'fill-primary text-primary' : 'text-muted-foreground'}`}
-              />
-            )}
-          </button>
-        </div>
+          {showPause ? (
+            <Pause className="h-3 w-3 fill-current text-current" />
+          ) : (
+            <Play
+              className={`h-3 w-3 transition-all duration-200 ${
+                isActive
+                  ? 'fill-current text-current'
+                  : 'scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100 group-hover/play-target:scale-100 group-hover/play-target:opacity-100'
+              }`}
+            />
+          )}
+        </button>
 
         {/* Text */}
         <p

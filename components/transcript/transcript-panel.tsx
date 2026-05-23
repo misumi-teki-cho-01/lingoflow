@@ -14,6 +14,8 @@ import {
   Check,
   Sparkles,
   TriangleAlert,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import { TranscriptSegmentRow } from './transcript-segment';
 import { DictionaryPopover } from '@/components/scribe/dictionary-popover';
@@ -52,6 +54,8 @@ interface TranscriptPanelProps {
   onClearWords?: () => void;
   suppressInstantLookup?: boolean;
   onSuppressInstantLookupChange?: (checked: boolean) => void;
+  isLoopLocked?: boolean;
+  onToggleLoopLock?: () => void;
 }
 
 export function TranscriptPanel({
@@ -77,6 +81,8 @@ export function TranscriptPanel({
   onClearWords,
   suppressInstantLookup = false,
   onSuppressInstantLookupChange,
+  isLoopLocked = false,
+  onToggleLoopLock,
 }: TranscriptPanelProps) {
   const t = useTranslations('transcript');
   const tCommon = useTranslations('common');
@@ -188,6 +194,23 @@ export function TranscriptPanel({
           </div>
 
           <div className="flex items-center gap-1">
+            {wordClickMode && onToggleLoopLock && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-8 w-8 transition-colors ${
+                  isLoopLocked
+                    ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 dark:text-amber-300'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={onToggleLoopLock}
+                title={isLoopLocked ? t('unlockLoop') : t('lockCurrentLine')}
+                aria-label={isLoopLocked ? t('unlockLoop') : t('lockCurrentLine')}
+                aria-pressed={isLoopLocked}
+              >
+                {isLoopLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"

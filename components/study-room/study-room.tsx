@@ -317,10 +317,15 @@ export function StudyRoom({
   const playerPlayRef = useRef(player.play);
   playerPlayRef.current = player.play;
   const playerStateRef = useRef(player.playerState);
+  const activeSegmentIndexRef = useRef(activeSegmentIndex);
 
   useEffect(() => {
     playerStateRef.current = player.playerState;
   }, [player.playerState]);
+
+  useEffect(() => {
+    activeSegmentIndexRef.current = activeSegmentIndex;
+  }, [activeSegmentIndex]);
 
   const playFromSegment = useCallback((time: number, isActive: boolean) => {
     if (isActive && playerStateRef.current === 'playing') {
@@ -331,6 +336,44 @@ export function StudyRoom({
     playerSeekRef.current(time);
     playerPlayRef.current();
   }, []);
+
+  const [loopSegmentIndex, setLoopSegmentIndex] = useState<number | null>(null);
+  const loopSeekTimestampRef = useRef(0);
+  const isLoopLocked = loopSegmentIndex !== null;
+
+  const toggleCurrentLineLoop = useCallback(() => {
+    setLoopSegmentIndex((current) => {
+      if (current !== null) return null;
+      const nextIndex = activeSegmentIndexRef.current;
+      if (nextIndex < 0) return null;
+      return nextIndex;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (loopSegmentIndex === null) return;
+    if (!liveSegments[loopSegmentIndex]) {
+      setLoopSegmentIndex(null);
+    }
+  }, [liveSegments, loopSegmentIndex]);
+
+  useEffect(() => {
+    if (loopSegmentIndex === null || player.playerState !== 'playing') return;
+
+    const segment = liveSegments[loopSegmentIndex];
+    if (!segment) return;
+
+    const now = Date.now();
+    const outsideLockedSegment =
+      player.currentTime < segment.start_time - 0.15 ||
+      player.currentTime >= segment.end_time - 0.05;
+
+    if (!outsideLockedSegment || now - loopSeekTimestampRef.current < 250) return;
+
+    loopSeekTimestampRef.current = now;
+    playerSeekRef.current(segment.start_time);
+    playerPlayRef.current();
+  }, [liveSegments, loopSegmentIndex, player.currentTime, player.playerState]);
 
   // ── Shared export metadata ─────────────────────────────────────────────────
   const exportMeta = useMemo(
@@ -357,13 +400,19 @@ export function StudyRoom({
   // ── Global keyboard shortcuts (Scribe mode only) ───────────────────────────
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (mode !== 'scribe') return;
-
       const target = e.target as HTMLElement;
       const isEditor = target.contentEditable === 'true';
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
 
-      if (e.key === 'Enter' && !isEditor && !isInput) {
+      if (isEditor || isInput || e.repeat) return;
+
+      if (mode === 'cc' && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        toggleCurrentLineLoop();
+        return;
+      }
+
+      if (mode === 'scribe' && e.key === 'Enter') {
         e.preventDefault();
         playerPauseRef.current();
         document.querySelector<HTMLElement>('.ProseMirror')?.focus();
@@ -373,7 +422,7 @@ export function StudyRoom({
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [mode]);
+  }, [mode, toggleCurrentLineLoop]);
 
   // ── Export ────────────────────────────────────────────────────────────────
   const handleExport = () => {
@@ -944,6 +993,8 @@ export function StudyRoom({
               onExplainWords={openCCVocabularyReview}
               suppressInstantLookup={suppressInstantLookup}
               onSuppressInstantLookupChange={handleSuppressInstantLookupChange}
+              isLoopLocked={isLoopLocked}
+              onToggleLoopLock={toggleCurrentLineLoop}
             />
           ) : (
             <FillPanel

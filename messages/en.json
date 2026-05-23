@@ -211,6 +211,8 @@
     "searchPlaceholder": "Search transcript...",
     "searchEmpty": "No segments found for \"{query}\"",
     "autoScroll": "Auto-scroll",
+    "lockCurrentLine": "Loop current line (L)",
+    "unlockLoop": "Unlock loop (L)",
     "followProgress": "Follow Progress",
     "explainWords": "Explain {count} words",
     "clearSelection": "Clear",
