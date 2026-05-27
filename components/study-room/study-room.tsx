@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useVideoPlayer } from '@/hooks/use-video-player';
+import { usePlaybackProgress } from '@/hooks/use-playback-progress';
 import { useTranscriptSync } from '@/hooks/use-transcript-sync';
 import { useVocabularyReview } from '@/hooks/use-vocabulary-review';
 import { VideoControls } from '@/components/video/video-controls';
@@ -290,6 +291,14 @@ export function StudyRoom({
   // ── Player ────────────────────────────────────────────────────────────────
   const containerRef = useRef<HTMLDivElement>(null);
   const player = useVideoPlayer({ containerRef, videoUrl });
+  usePlaybackProgress({
+    videoId,
+    currentTime: player.currentTime,
+    duration: player.duration,
+    isReady: player.isReady,
+    playerState: player.playerState,
+    seekTo: player.seekTo,
+  });
   const { activeSegment, activeSegmentIndex } = useTranscriptSync(liveSegments, player.currentTime);
 
   // ── Editor ref ────────────────────────────────────────────────────────────

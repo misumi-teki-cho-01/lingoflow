@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { CheckCircle2, TriangleAlert } from 'lucide-react';
 import { useTranscriptSync } from '@/hooks/use-transcript-sync';
 import { useVideoPlayer } from '@/hooks/use-video-player';
+import { usePlaybackProgress } from '@/hooks/use-playback-progress';
 import { SubtitleUploadPanel } from '@/components/transcript/subtitle-upload-panel';
 import { VideoProgressLine } from '@/components/video/video-progress-line';
 import { useSeekStep, VideoTransportControls } from '@/components/video/video-transport-controls';
@@ -65,6 +66,14 @@ export function CinemaRoom({
   const seekStep = useSeekStep();
 
   const player = useVideoPlayer({ containerRef, videoUrl });
+  usePlaybackProgress({
+    videoId,
+    currentTime: player.currentTime,
+    duration: player.duration,
+    isReady: player.isReady,
+    playerState: player.playerState,
+    seekTo: player.seekTo,
+  });
   const { activeSegmentIndex } = useTranscriptSync(liveSegments, player.currentTime);
 
   const subtitleRows = useMemo(
