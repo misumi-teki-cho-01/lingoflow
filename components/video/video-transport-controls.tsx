@@ -3,6 +3,13 @@
 import { useState, useSyncExternalStore } from 'react';
 import { FastForward, Rewind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { UseVideoPlayerReturn } from '@/hooks/use-video-player';
 
@@ -55,6 +62,9 @@ export function VideoTransportControls({ player, className }: VideoTransportCont
     player.setPlaybackRate(value);
   };
 
+  const compactTriggerClass =
+    'h-7 rounded-full border-border bg-background px-2.5 py-0 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40';
+
   return (
     <div
       className={cn(
@@ -62,19 +72,24 @@ export function VideoTransportControls({ player, className }: VideoTransportCont
         className,
       )}
     >
-      <select
+      <Select<number>
         value={seekStep}
-        onChange={(event) => handleSeekStepChange(Number(event.target.value))}
+        onValueChange={(value) => {
+          if (value !== null) handleSeekStepChange(value);
+        }}
         disabled={!player.isReady}
-        className="rounded-full border border-border bg-background px-2 py-1 text-xs text-muted-foreground outline-none transition-colors hover:text-foreground disabled:opacity-40"
-        title="Fast-forward/Rewind duration"
       >
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((seconds) => (
-          <option key={seconds} value={seconds}>
-            ±{seconds}s
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className={compactTriggerClass} title="Fast-forward/Rewind duration">
+          <SelectValue>±{seekStep}s</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {Array.from({ length: 10 }, (_, i) => i + 1).map((seconds) => (
+            <SelectItem key={seconds} value={seconds}>
+              ±{seconds}s
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button
         variant="ghost"
         size="icon"
@@ -95,19 +110,24 @@ export function VideoTransportControls({ player, className }: VideoTransportCont
       >
         <FastForward className="h-3.5 w-3.5" />
       </Button>
-      <select
+      <Select<number>
         value={playbackRate}
-        onChange={(event) => handlePlaybackRateChange(Number(event.target.value))}
+        onValueChange={(value) => {
+          if (value !== null) handlePlaybackRateChange(value);
+        }}
         disabled={!player.isReady}
-        className="rounded-full border border-border bg-background px-2 py-1 text-xs text-muted-foreground outline-none transition-colors hover:text-foreground disabled:opacity-40"
-        title="Playback rate"
       >
-        {PLAYBACK_RATES.map((rate) => (
-          <option key={rate} value={rate}>
-            {rate}x
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className={compactTriggerClass} title="Playback rate">
+          <SelectValue>{playbackRate}x</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {PLAYBACK_RATES.map((rate) => (
+            <SelectItem key={rate} value={rate}>
+              {rate}x
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

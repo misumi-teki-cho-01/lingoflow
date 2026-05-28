@@ -80,6 +80,8 @@
       "local": "本地"
     },
     "allChannels": "全部频道",
+    "showMoreChannels": "+{count} 个",
+    "showLessChannels": "收起",
     "channelGroup": "{name} · {count} 个视频",
     "noSearchResults": "没有找到匹配的视频",
     "viewGrid": "网格视图",

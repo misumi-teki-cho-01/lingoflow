@@ -80,6 +80,8 @@
       "local": "Local"
     },
     "allChannels": "All channels",
+    "showMoreChannels": "+{count} more",
+    "showLessChannels": "Show less",
     "channelGroup": "{name} · {count} videos",
     "noSearchResults": "No matching videos",
     "viewGrid": "Grid view",

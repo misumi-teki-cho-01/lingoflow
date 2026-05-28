@@ -2,7 +2,17 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { Search, LayoutGrid, List, Play, Tv2, Loader2, AlertTriangle } from 'lucide-react';
+import {
+  Search,
+  LayoutGrid,
+  List,
+  Play,
+  Tv2,
+  Loader2,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { VideoCard, type VideoCardData } from '@/components/video/video-card';
 import { deleteVideo, fetchVideosPage } from '@/app/actions/videos';
 import { deleteLocalVideo } from '@/lib/utils/local-media-store';
@@ -10,6 +20,7 @@ import { parseVideoEntryMode, type VideoEntryMode } from '@/lib/study-room/study
 
 const PAGE_SIZE = 24;
 const ENTRY_MODE_STORAGE_KEY = 'lingoflow-dashboard-entry-mode';
+const COLLAPSED_CHANNEL_COUNT = 6;
 
 interface DashboardVideoLibraryProps {
   videos: VideoCardData[]; // initial SSR batch
@@ -34,6 +45,7 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'channels'>('grid');
   const [entryMode, setEntryMode] = useState<VideoEntryMode>('cc');
+  const [channelsExpanded, setChannelsExpanded] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('dashboard-view-mode');
@@ -103,6 +115,19 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => ({ name, count }));
   }, [allVideos]);
+
+  const hasHiddenChannels = channels.length > COLLAPSED_CHANNEL_COUNT;
+  const visibleChannels = useMemo(() => {
+    if (!hasHiddenChannels || channelsExpanded) return channels;
+    const top = channels.slice(0, COLLAPSED_CHANNEL_COUNT);
+    // Always keep the currently selected channel visible, even if it's outside the top N
+    if (selectedChannel && !top.some((c) => c.name === selectedChannel)) {
+      const selected = channels.find((c) => c.name === selectedChannel);
+      if (selected) return [...top, selected];
+    }
+    return top;
+  }, [channels, channelsExpanded, hasHiddenChannels, selectedChannel]);
+  const hiddenChannelCount = channels.length - visibleChannels.length;
 
   const sources = useMemo(() => {
     const counts = new Map<string, number>();
@@ -289,7 +314,7 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
               </button>
 
               {/* Per-channel pills */}
-              {channels.map(({ name, count }) => (
+              {visibleChannels.map(({ name, count }) => (
                 <button
                   key={name}
                   onClick={() => setSelectedChannel((prev) => (prev === name ? null : name))}
@@ -311,6 +336,27 @@ export function DashboardVideoLibrary({ videos: initialVideos }: DashboardVideoL
                   </span>
                 </button>
               ))}
+
+              {/* Expand / collapse toggle */}
+              {hasHiddenChannels && (
+                <button
+                  onClick={() => setChannelsExpanded((v) => !v)}
+                  aria-expanded={channelsExpanded}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground hover:border-primary/50 hover:text-foreground bg-background transition-colors"
+                >
+                  {channelsExpanded ? (
+                    <>
+                      {t('showLessChannels')}
+                      <ChevronUp className="h-3 w-3" />
+                    </>
+                  ) : (
+                    <>
+                      {t('showMoreChannels', { count: hiddenChannelCount })}
+                      <ChevronDown className="h-3 w-3" />
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           )}
 

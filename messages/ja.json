@@ -80,6 +80,8 @@
       "local": "ローカル"
     },
     "allChannels": "すべてのチャンネル",
+    "showMoreChannels": "+{count} 件",
+    "showLessChannels": "折りたたむ",
     "channelGroup": "{name} · {count} 本",
     "noSearchResults": "一致する動画なし",
     "viewGrid": "グリッド表示",

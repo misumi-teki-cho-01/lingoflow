@@ -4,8 +4,16 @@ import { useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const THEMES = ['system', 'light', 'dark'] as const;
+type Theme = (typeof THEMES)[number];
 
 function subscribe() {
   return () => {};
@@ -20,7 +28,7 @@ export function ThemeSwitcher() {
     () => false,
   );
 
-  const activeTheme = mounted ? (theme ?? 'system') : 'system';
+  const activeTheme = (mounted ? (theme ?? 'system') : 'system') as Theme;
   const Icon =
     activeTheme === 'system'
       ? Monitor
@@ -29,22 +37,28 @@ export function ThemeSwitcher() {
         : Sun;
 
   return (
-    <label className="inline-flex h-7 items-center gap-1.5 rounded-full border border-transparent bg-transparent px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-within:bg-muted focus-within:text-foreground">
-      <Icon className="h-3.5 w-3.5" aria-hidden />
-      <span className="sr-only">{t('label')}</span>
-      <select
-        value={activeTheme}
-        onChange={(event) => setTheme(event.target.value)}
-        disabled={!mounted}
+    <Select<Theme>
+      value={activeTheme}
+      onValueChange={(value) => {
+        if (value) setTheme(value);
+      }}
+      disabled={!mounted}
+    >
+      <SelectTrigger
         aria-label={t('label')}
-        className="max-w-20 cursor-pointer bg-transparent text-xs outline-none disabled:cursor-default disabled:opacity-60"
+        className="h-7 gap-1.5 rounded-full border-transparent bg-transparent px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground data-[popup-open]:bg-muted data-[popup-open]:text-foreground disabled:opacity-60 dark:bg-transparent dark:hover:bg-muted"
+        showIcon={false}
       >
+        <Icon className="h-3.5 w-3.5" aria-hidden />
+        <SelectValue className="max-w-20">{t(activeTheme)}</SelectValue>
+      </SelectTrigger>
+      <SelectContent align="end">
         {THEMES.map((value) => (
-          <option key={value} value={value}>
+          <SelectItem key={value} value={value}>
             {t(value)}
-          </option>
+          </SelectItem>
         ))}
-      </select>
-    </label>
+      </SelectContent>
+    </Select>
   );
 }
