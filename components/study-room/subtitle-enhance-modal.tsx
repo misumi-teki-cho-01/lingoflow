@@ -7,17 +7,31 @@ import { JsonValidationBadge } from '@/components/ui/json-validation-badge';
 import {
   CheckCircle2,
   ChevronLeft,
+  Cpu,
   Copy,
   Languages,
+  Loader2,
   Save,
+  Sparkles,
   TriangleAlert,
   Wand2,
 } from 'lucide-react';
 import { getEnhancementPrompt } from '@/lib/ai/prompts';
+import { reconstructSegmentsFromGroupings } from '@/lib/ai/services';
+import { fetchAIEnhancement } from '@/lib/api/ai';
 import { useJsonValidation } from '@/hooks/use-json-validation';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { DEFAULT_MODEL_ID, MODEL_OPTIONS } from '@/lib/ai/client';
 import type { TranscriptSegment } from '@/types/transcript';
 
 const PROMPT_LANGUAGE_KEY = 'lingo-prompt-language';
+const MODEL_ID_KEY = 'lingo-ai-model-id';
 
 const LANGUAGE_OPTIONS = [
   { value: 'zh', label: '中文' },
@@ -25,7 +39,9 @@ const LANGUAGE_OPTIONS = [
   { value: 'en', label: 'English' },
 ];
 
-type Step = 'copy_prompt' | 'paste_response' | 'preview';
+type Mode = 'manual' | 'auto';
+type Step = 'manual_prompt' | 'manual_paste' | 'auto_config' | 'auto_running' | 'preview';
+
 type Notice = {
   tone: 'success' | 'error';
   text: string;
@@ -42,16 +58,8 @@ export interface SubtitleEnhanceModalProps {
 }
 
 function buildEnhancePrompt(segments: TranscriptSegment[], lang: string): string {
-  const input = JSON.stringify(
-    segments.map((s) => ({
-      start_time: s.start_time,
-      end_time: s.end_time,
-      text: s.text,
-    })),
-    null,
-    2,
-  );
-  return `${getEnhancementPrompt(lang)}\n\nTranscript:\n${input}`;
+  const numbered = segments.map((s, idx) => ({ id: idx + 1, text: s.text }));
+  return `${getEnhancementPrompt(lang)}\n\nTranscript:\n${JSON.stringify(numbered, null, 2)}`;
 }
 
 export function SubtitleEnhanceModal({
@@ -64,13 +72,16 @@ export function SubtitleEnhanceModal({
   const t = useTranslations('studyRoom');
   const locale = useLocale();
 
+  // Mode: default to manual every time (NOT persisted)
+  const [mode, setMode] = useState<Mode>('manual');
   // "current" = already-enhanced liveSegments; "raw" = original YouTube subtitles
   const [sourceMode, setSourceMode] = useState<'current' | 'raw'>('current');
-  const [step, setStep] = useState<Step>('copy_prompt');
+  const [step, setStep] = useState<Step>('manual_prompt');
   const [editablePrompt, setEditablePrompt] = useState('');
   const [pastedJson, setPastedJson] = useState('');
   const [enhancedSegments, setEnhancedSegments] = useState<TranscriptSegment[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [promptCopied, setPromptCopied] = useState(false);
   const [promptLanguage, setPromptLanguage] = useState<string>(() => {
@@ -79,9 +90,15 @@ export function SubtitleEnhanceModal({
     }
     return locale;
   });
+  const [modelId, setModelId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(MODEL_ID_KEY) || DEFAULT_MODEL_ID;
+    }
+    return DEFAULT_MODEL_ID;
+  });
   const pasteTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const jsonValidation = useJsonValidation(step === 'paste_response' ? pastedJson : '', 'segments');
+  const jsonValidation = useJsonValidation(step === 'manual_paste' ? pastedJson : '', 'segments');
 
   // Apply auto-corrected text back to the textarea when the hook fixes it
   useEffect(() => {
@@ -92,7 +109,8 @@ export function SubtitleEnhanceModal({
 
   useEffect(() => {
     if (!visible) return;
-    setStep('copy_prompt');
+    setMode('manual');
+    setStep('manual_prompt');
     setSourceMode('current');
     const saved = typeof window !== 'undefined' ? localStorage.getItem(PROMPT_LANGUAGE_KEY) : null;
     const lang = saved || locale;
@@ -101,11 +119,20 @@ export function SubtitleEnhanceModal({
     setPastedJson('');
     setEnhancedSegments([]);
     setIsSaving(false);
+    setIsRunning(false);
     setNotice(null);
     setPromptCopied(false);
   }, [visible, segments, locale]);
 
   const activeSegments = sourceMode === 'raw' && rawSegments ? rawSegments : segments;
+
+  const handleModeChange = (next: Mode) => {
+    if (isRunning || isSaving) return;
+    setMode(next);
+    setStep(next === 'manual' ? 'manual_prompt' : 'auto_config');
+    setNotice(null);
+    setPastedJson('');
+  };
 
   const handleLanguageChange = (lang: string) => {
     setPromptLanguage(lang);
@@ -113,9 +140,14 @@ export function SubtitleEnhanceModal({
     setEditablePrompt(buildEnhancePrompt(activeSegments, lang));
   };
 
-  const handleSourceModeChange = (mode: 'current' | 'raw') => {
-    setSourceMode(mode);
-    const src = mode === 'raw' && rawSegments ? rawSegments : segments;
+  const handleModelChange = (next: string) => {
+    setModelId(next);
+    localStorage.setItem(MODEL_ID_KEY, next);
+  };
+
+  const handleSourceModeChange = (next: 'current' | 'raw') => {
+    setSourceMode(next);
+    const src = next === 'raw' && rawSegments ? rawSegments : segments;
     setEditablePrompt(buildEnhancePrompt(src, promptLanguage));
   };
 
@@ -127,37 +159,45 @@ export function SubtitleEnhanceModal({
       setPromptCopied(true);
       setTimeout(() => setPromptCopied(false), 1500);
       setNotice({ tone: 'success', text: t('promptCopiedToast') });
-      setStep('paste_response');
+      setStep('manual_paste');
     } catch {
       setNotice({ tone: 'error', text: t('copyPromptFailed') });
     }
   };
 
   const handleApplyJson = () => {
+    const result = reconstructSegmentsFromGroupings(activeSegments, pastedJson);
+    if (!result.ok) {
+      setNotice({
+        tone: 'error',
+        text: t('enhanceGroupingInvalid', { reason: result.error }),
+      });
+      return;
+    }
+    setEnhancedSegments(result.segments);
+    setStep('preview');
+    setNotice(null);
+  };
+
+  const handleRunAuto = async () => {
+    setIsRunning(true);
+    setNotice(null);
+    setStep('auto_running');
     try {
-      const parsed = JSON.parse(pastedJson) as unknown;
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        setNotice({ tone: 'error', text: t('enhanceJsonInvalid') });
+      const result = await fetchAIEnhancement(activeSegments, promptLanguage, modelId);
+      if (!result || result.length === 0) {
+        setNotice({ tone: 'error', text: t('enhanceAutoEmpty') });
+        setStep('auto_config');
         return;
       }
-      const isValid = parsed.every(
-        (s) =>
-          s &&
-          typeof s === 'object' &&
-          typeof (s as Record<string, unknown>).start_time === 'number' &&
-          typeof (s as Record<string, unknown>).end_time === 'number' &&
-          typeof (s as Record<string, unknown>).text === 'string' &&
-          ((s as Record<string, unknown>).text as string).length > 0,
-      );
-      if (!isValid) {
-        setNotice({ tone: 'error', text: t('enhanceJsonInvalid') });
-        return;
-      }
-      setEnhancedSegments(parsed as TranscriptSegment[]);
+      setEnhancedSegments(result);
       setStep('preview');
-      setNotice(null);
-    } catch {
-      setNotice({ tone: 'error', text: t('enhanceJsonInvalid') });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t('enhanceAutoFailed');
+      setNotice({ tone: 'error', text: msg });
+      setStep('auto_config');
+    } finally {
+      setIsRunning(false);
     }
   };
 
@@ -173,14 +213,18 @@ export function SubtitleEnhanceModal({
   };
 
   const stepTitle = {
-    copy_prompt: t('enhancePromptTitle'),
-    paste_response: t('enhancePasteTitle'),
+    manual_prompt: t('enhancePromptTitle'),
+    manual_paste: t('enhancePasteTitle'),
+    auto_config: t('enhanceAutoConfigTitle'),
+    auto_running: t('enhanceAutoRunningTitle'),
     preview: t('enhancePreviewTitle'),
   }[step];
 
   const stepDesc = {
-    copy_prompt: t('enhancePromptDesc'),
-    paste_response: t('enhancePasteDesc'),
+    manual_prompt: t('enhancePromptDesc'),
+    manual_paste: t('enhancePasteDesc'),
+    auto_config: t('enhanceAutoConfigDesc', { count: activeSegments.length }),
+    auto_running: t('enhanceAutoRunningDesc'),
     preview: t('enhancePreviewDesc', {
       from: segments.length,
       to: enhancedSegments.length,
@@ -191,6 +235,9 @@ export function SubtitleEnhanceModal({
     notice?.tone === 'success'
       ? 'border-emerald-300/70 bg-emerald-50 text-emerald-700'
       : 'border-red-300/70 bg-red-50 text-red-700';
+
+  // Mode toggle is shown only on the entry screen of each flow.
+  const showModeToggle = step === 'manual_prompt' || step === 'auto_config';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
@@ -204,7 +251,7 @@ export function SubtitleEnhanceModal({
             </h3>
             <p className="text-sm text-muted-foreground mt-1">{stepDesc}</p>
           </div>
-          <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+          <Button variant="outline" onClick={onCancel} disabled={isSaving || isRunning}>
             {t('close')}
           </Button>
         </div>
@@ -225,7 +272,33 @@ export function SubtitleEnhanceModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 bg-muted/10 custom-scrollbar">
-          {step === 'copy_prompt' && (
+          {/* ── Mode toggle (entry screens only) ── */}
+          {showModeToggle && (
+            <div className="mb-4 flex items-center gap-3">
+              <span className="text-sm font-medium shrink-0">{t('enhanceModeLabel')}</span>
+              <div className="flex items-center gap-1 rounded-full border border-border bg-muted/30 p-0.5">
+                {(['manual', 'auto'] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => handleModeChange(m)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                      mode === m
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {m === 'manual' ? t('enhanceModeManual') : t('enhanceModeAuto')}
+                  </button>
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {mode === 'manual' ? t('enhanceModeManualHint') : t('enhanceModeAutoHint')}
+              </span>
+            </div>
+          )}
+
+          {/* ── Shared config (source + language) ── */}
+          {(step === 'manual_prompt' || step === 'auto_config') && (
             <div className="space-y-4">
               {/* Source selector — only shown when raw segments are available */}
               {rawSegments && rawSegments.length > 0 && (
@@ -234,17 +307,17 @@ export function SubtitleEnhanceModal({
                     {t('enhanceSource')}
                   </span>
                   <div className="flex items-center gap-1 rounded-full border border-amber-300 dark:border-amber-700 bg-background p-0.5">
-                    {(['current', 'raw'] as const).map((mode) => (
+                    {(['current', 'raw'] as const).map((m) => (
                       <button
-                        key={mode}
-                        onClick={() => handleSourceModeChange(mode)}
+                        key={m}
+                        onClick={() => handleSourceModeChange(m)}
                         className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                          sourceMode === mode
+                          sourceMode === m
                             ? 'bg-amber-500 text-white shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
-                        {mode === 'current' ? t('enhanceSourceCurrent') : t('enhanceSourceRaw')}
+                        {m === 'current' ? t('enhanceSourceCurrent') : t('enhanceSourceRaw')}
                       </button>
                     ))}
                   </div>
@@ -279,19 +352,58 @@ export function SubtitleEnhanceModal({
                 </div>
               </div>
 
-              {/* Editable prompt */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('promptEditableLabel')}</label>
-                <textarea
-                  value={editablePrompt}
-                  onChange={(e) => setEditablePrompt(e.target.value)}
-                  className="min-h-[380px] w-full rounded-lg border border-input bg-background px-3 py-3 text-xs font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring custom-scrollbar"
-                />
-              </div>
+              {/* Manual: editable prompt */}
+              {step === 'manual_prompt' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{t('promptEditableLabel')}</label>
+                  <textarea
+                    value={editablePrompt}
+                    onChange={(e) => setEditablePrompt(e.target.value)}
+                    className="min-h-[380px] w-full rounded-lg border border-input bg-background px-3 py-3 text-xs font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring custom-scrollbar"
+                  />
+                </div>
+              )}
+
+              {/* Auto: model picker */}
+              {step === 'auto_config' && (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Cpu className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium shrink-0">{t('enhanceModelLabel')}</span>
+                    <Select<string>
+                      value={modelId}
+                      onValueChange={(v) => v && handleModelChange(v)}
+                    >
+                      <SelectTrigger className="min-w-[220px]">
+                        <SelectValue>
+                          {MODEL_OPTIONS.find((m) => m.id === modelId)?.label ?? modelId}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MODEL_OPTIONS.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            <span className="flex flex-col">
+                              <span>{m.label}</span>
+                              {m.hint && (
+                                <span className="text-xs text-muted-foreground">{m.hint}</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="rounded-lg border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800/40 px-4 py-3 text-sm text-violet-700 dark:text-violet-300 flex items-start gap-2">
+                    <Sparkles className="h-4 w-4 mt-0.5 shrink-0" />
+                    <span>{t('enhanceAutoHint', { count: activeSegments.length })}</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
-          {step === 'paste_response' && (
+          {step === 'manual_paste' && (
             <div className="space-y-2">
               <label htmlFor="enhance-json" className="text-sm font-medium">
                 {t('enhancePasteLabel')}
@@ -301,7 +413,7 @@ export function SubtitleEnhanceModal({
                 ref={pasteTextareaRef}
                 value={pastedJson}
                 onChange={(e) => setPastedJson(e.target.value)}
-                placeholder={'[{"start_time": 0.0, "end_time": 2.5, "text": "..."}, ...]'}
+                placeholder={'[{"ids": [1, 2, 3], "text": "..."}]'}
                 className={`min-h-[300px] w-full rounded-lg border bg-background px-3 py-3 text-sm font-mono focus-visible:outline-none focus-visible:ring-1 custom-scrollbar transition-colors ${
                   jsonValidation.status === 'invalid'
                     ? 'border-red-400 focus-visible:ring-red-400'
@@ -313,8 +425,18 @@ export function SubtitleEnhanceModal({
               <JsonValidationBadge
                 validation={jsonValidation}
                 onJump={() => jsonValidation.jumpToError(pasteTextareaRef.current)}
-                validLabel={`✓ 共 ${jsonValidation.itemCount} 条字幕`}
+                validLabel={t('enhanceGroupingsValid', {
+                  count: jsonValidation.itemCount ?? 0,
+                })}
               />
+            </div>
+          )}
+
+          {step === 'auto_running' && (
+            <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+              <p className="text-sm font-medium">{t('enhanceAutoRunningTitle')}</p>
+              <p className="text-xs">{t('enhanceAutoRunningDesc')}</p>
             </div>
           )}
 
@@ -362,7 +484,7 @@ export function SubtitleEnhanceModal({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border shrink-0 bg-muted/20 flex gap-3 justify-end items-center">
-          {step === 'copy_prompt' && (
+          {step === 'manual_prompt' && (
             <Button
               onClick={handleCopyAndContinue}
               disabled={!editablePrompt.trim()}
@@ -373,9 +495,9 @@ export function SubtitleEnhanceModal({
             </Button>
           )}
 
-          {step === 'paste_response' && (
+          {step === 'manual_paste' && (
             <>
-              <Button variant="outline" onClick={() => setStep('copy_prompt')} className="gap-2">
+              <Button variant="outline" onClick={() => setStep('manual_prompt')} className="gap-2">
                 <ChevronLeft className="h-4 w-4" />
                 {t('backToPromptEditor')}
               </Button>
@@ -385,16 +507,23 @@ export function SubtitleEnhanceModal({
             </>
           )}
 
+          {step === 'auto_config' && (
+            <Button onClick={handleRunAuto} disabled={isRunning} className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              {t('enhanceAutoRun')}
+            </Button>
+          )}
+
           {step === 'preview' && (
             <>
               <Button
                 variant="outline"
-                onClick={() => setStep('paste_response')}
+                onClick={() => setStep(mode === 'manual' ? 'manual_paste' : 'auto_config')}
                 disabled={isSaving}
                 className="gap-2"
               >
                 <ChevronLeft className="h-4 w-4" />
-                {t('backToPasteJson')}
+                {mode === 'manual' ? t('backToPasteJson') : t('backToAutoConfig')}
               </Button>
               <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                 <Save className="h-4 w-4" />

@@ -232,59 +232,50 @@ export function getEnhancementPrompt(locale: string = 'zh'): string {
   const isJapanese = locale.startsWith('ja');
 
   const FORMAT_RULE = `Return ONLY a JSON array with this exact format, no markdown fencing:
-[{"start_time": 0.0, "end_time": 2.5, "text": "Hello and welcome."}]
+[
+  {"ids": [1, 2, 3], "text": "Cleaned, merged sentence text."},
+  {"ids": [4], "text": "Next sentence."}
+]
 
 Rules:
-- Timestamps in seconds (float)
-- Return valid JSON only — no text before or after the array`;
+- Each "ids" array lists the IDs of the input segments that compose this sentence, in order.
+- Every input ID must appear exactly once across all output items. Do not skip or duplicate IDs.
+- "text" is the cleaned and (if needed) merged content of those segments.
+- Do NOT output start_time or end_time — timestamps will be reconstructed from "ids" by the caller.
+- Return valid JSON only — no text before or after the array, no markdown code fences.`;
 
   if (isChinese) {
-    return `你是一位专业的语言学习助手。我将提供一段带时间戳的视频字幕，请按以下要求进行优化：
+    return `你是一位专业的语言学习助手。我将提供一段视频字幕，每条片段都带有数字 ID。请按以下要求进行优化：
 
-1. 修正标点符号、大小写和拼写错误
-2. 将属于同一句话的片段合并（取所有被合并片段中最小的 start_time 和最大的 end_time）
-3. 不要拆分句子——合并操作保持保守
-4. 删除 [Music]、[Applause] 等无意义的标注（除非有上下文意义）
-5. 严格保留原意——不要意译或改写
-
-时间戳规则：
-- 直接从输入中复制 start_time 和 end_time——不要自行推算或修改
-- 合并时使用被合并条目中最小的 start_time 和最大的 end_time
-- 片段之间存在间隙是可以接受的——不要为了填补间隙而调整时间戳
+1. **判断句子边界**：将属于同一句话的若干相邻片段归为同一组（一个组对应一句话）；可以独立成句的片段单独成组。
+2. **修正文本**：修正标点符号、大小写和拼写错误。
+3. **保持保守**：不要拆分原本的片段。不要意译或改写；严格保留原意。
+4. **过滤无意义内容**：删除 [Music]、[Applause] 等无意义的标注（除非有上下文意义）。若整条片段被删，则不要把它的 ID 包含到任何分组中。
+5. **不要输出时间戳**：你只负责文本与分组；时间戳由调用方根据每个分组里的 ID 自行计算。
 
 ${FORMAT_RULE}`;
   }
 
   if (isJapanese) {
-    return `あなたはプロの言語学習アシスタントです。タイムスタンプ付きの動画字幕を提供します。以下の改善を行ってください：
+    return `あなたはプロの言語学習アシスタントです。各セグメントに数字 ID が付いた動画字幕を提供します。以下を行ってください：
 
-1. 句読点・大文字/小文字・スペルミスを修正する
-2. 同じ文に属するフラグメントを結合する（結合するフラグメントの中で最も小さい start_time と最も大きい end_time を使用する）
-3. 文を分割しない——結合は控えめに行う
-4. [Music]、[Applause] などの無意義なアノテーションを削除する（文脈上意味がある場合を除く）
-5. 原文の意味を厳密に保持する——言い換えや意訳は禁止
-
-タイムスタンプのルール：
-- start_time と end_time は入力からそのままコピーする——値を推測・再計算しない
-- 結合する場合は、結合対象の中で最も小さい start_time と最も大きい end_time を使用する
-- セグメント間にギャップがあっても許容される——ギャップを埋めるためにタイムスタンプを調整しない
+1. **文境界の判定**：同じ文に属する隣接セグメントを 1 つのグループにまとめます（1 グループ = 1 文）。独立した文として完結するセグメントは単独でグループにします。
+2. **テキストの修正**：句読点、大文字/小文字、スペルミスを修正します。
+3. **保守的に**：元のセグメントを分割しないでください。言い換え・意訳は禁止し、原文の意味を厳密に保ちます。
+4. **不要なノイズの除去**：[Music]、[Applause] のような無意味な注釈は削除します（文脈上意味がある場合を除く）。セグメント全体を削除する場合は、その ID をどのグループにも含めないでください。
+5. **タイムスタンプを出力しない**：あなたは文章と分組のみを担当します。タイムスタンプは呼び出し側が ID から計算します。
 
 ${FORMAT_RULE}`;
   }
 
   // English / fallback
-  return `You are a language learning assistant. I'll give you a transcript from a video with timestamps. Please improve it for English learners:
+  return `You are an expert language learning assistant. I'll give you a transcript from a video where each segment has a numeric ID. Please:
 
-1. Fix punctuation, capitalization, and spelling errors
-2. Merge fragments that belong to the same sentence (use the earliest start_time and latest end_time of the merged fragments)
-3. Do NOT split sentences — keep merging conservative
-4. Remove filler annotations like [Music], [Applause] unless they provide context
-5. Preserve the original meaning exactly — do not paraphrase
-
-Timestamp rules:
-- Copy start_time and end_time exactly from the input — do not invent or recalculate values
-- When merging, use the smallest start_time and largest end_time among the merged items
-- Gaps between segments are acceptable — do not adjust timestamps to fill gaps
+1. **Identify sentence boundaries**: Group adjacent segments that belong to the same sentence into one group (one group = one sentence). Segments that stand on their own go in their own group.
+2. **Clean text**: Fix punctuation, capitalization, and spelling errors.
+3. **Stay conservative**: Do not split original segments. Do not paraphrase or rewrite — preserve the original meaning exactly.
+4. **Drop noise**: Remove filler annotations like [Music], [Applause] unless they provide context. If you drop a segment entirely, do NOT include its ID in any group.
+5. **No timestamps**: You only produce text and groupings. Timestamps are computed by the caller from each group's IDs.
 
 ${FORMAT_RULE}`;
 }

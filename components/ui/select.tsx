@@ -39,10 +39,7 @@ function SelectTrigger({
   );
 }
 
-function SelectValue({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Value>) {
+function SelectValue({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.Value>) {
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
@@ -64,11 +61,7 @@ function SelectContent({
 }) {
   return (
     <SelectPrimitive.Portal>
-      <SelectPrimitive.Positioner
-        sideOffset={sideOffset}
-        align={align}
-        className="z-50"
-      >
+      <SelectPrimitive.Positioner sideOffset={sideOffset} align={align} className="z-50">
         <SelectPrimitive.Popup
           data-slot="select-content"
           className={cn(

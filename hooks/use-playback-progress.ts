@@ -118,7 +118,8 @@ export function usePlaybackProgress({
 
     const now = Date.now();
     const shouldSaveImmediately = playerState === 'paused' || playerState === 'ended';
-    const movedEnough = Math.abs(currentTime - lastSavedPositionRef.current) >= MIN_SAVE_DELTA_SECONDS;
+    const movedEnough =
+      Math.abs(currentTime - lastSavedPositionRef.current) >= MIN_SAVE_DELTA_SECONDS;
     const intervalElapsed = now - lastSavedAtRef.current >= SAVE_INTERVAL_MS;
 
     if (!shouldSaveImmediately && (!movedEnough || !intervalElapsed)) return;

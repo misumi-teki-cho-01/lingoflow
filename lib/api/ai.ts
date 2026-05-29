@@ -2,6 +2,23 @@ import type { TranscriptSegment } from '@/types/transcript';
 import type { VocabularyExplanation } from '@/lib/ai/services';
 import type { CcSelection } from '@/types/transcript';
 
+export async function fetchAIEnhancement(
+  segments: TranscriptSegment[],
+  locale: string,
+  modelId?: string,
+): Promise<TranscriptSegment[]> {
+  const res = await fetch('/api/ai/enhance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ segments, locale, modelId }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to enhance subtitles');
+
+  return (data.segments ?? []) as TranscriptSegment[];
+}
+
 export async function fetchAIExplanations(
   mdText: string,
   wordsToExplain: string[],
